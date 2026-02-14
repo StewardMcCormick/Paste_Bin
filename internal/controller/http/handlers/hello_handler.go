@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func (h *Handler) HelloHandler(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) HelloHandler(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, struct {
 		Message string `json:"message"`
 	}{"Hello world!"})

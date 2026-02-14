@@ -1,8 +1,14 @@
 package handlers
 
-type Handler struct {
+import "net/http"
+
+type Handler interface {
+	HelloHandler(w http.ResponseWriter, r *http.Request)
 }
 
-func NewHandler() *Handler {
-	return &Handler{}
+type httpHandler struct {
+}
+
+func NewHandler() Handler {
+	return &httpHandler{}
 }
