@@ -1,6 +1,9 @@
 package httpserver
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+)
 
 type Config struct {
 	Host string `env:"SERVER_HOST" env-default:"localhost"`
@@ -24,6 +27,6 @@ func (s *Server) Run() error {
 	return s.server.ListenAndServe()
 }
 
-func (s *Server) Close() {
-	s.server.Close()
+func (s *Server) Close() error {
+	return s.server.Shutdown(context.Background())
 }

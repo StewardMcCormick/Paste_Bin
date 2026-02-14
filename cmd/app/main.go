@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/StewardMcCormick/Paste_Bin/config"
-	"github.com/StewardMcCormick/Paste_Bin/internal/controller/http"
+	"github.com/StewardMcCormick/Paste_Bin/internal/controller/HTTP"
+	"github.com/StewardMcCormick/Paste_Bin/internal/controller/HTTP/handlers"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/logging"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,23 +30,37 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 		panic(err)
 	}
 
-	router := http.Router(logger)
+	handler := handlers.NewHandler()
+	router := HTTP.Router(handler, logger)
 
 	server := httpserver.New(router, &cfg.Server)
 
-	logger.Info(fmt.Sprintf("Server starts on %s:%s", cfg.Server.Host, cfg.Server.Port))
-	err = server.Run()
-	if err != nil {
-		panic(err)
-	}
+	go func() {
+		logger.Info(fmt.Sprintf("Server starts on %s:%s", cfg.Server.Host, cfg.Server.Port))
+		err = server.Run()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			panic(err)
+		}
+	}()
 
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
 
 	<-sig
-	server.Close()
-	err = logger.Sync()
+	logger.Info("[SHUTDOWN] Start shutting down...")
+
+	logger.Info("[SHUTDOWN] Start closing server...")
+	err = server.Close()
 	if err != nil {
-		logger.Warn("Logger sync error when shouting down")
+		logger.Error(fmt.Sprintf("[SHUTDOWN] Server closing error: %v", err))
+	} else {
+		logger.Info("[SHUTDOWN] Server closed")
 	}
+
+	err = logger.Sync()
+	if err != nil && !errors.Is(err, syscall.ENOTTY) && !errors.Is(err, syscall.EINVAL) && !errors.Is(err, syscall.EBADF) {
+		logger.Error(fmt.Sprintf("[SHUTDOWN] Log sync error: %v", err))
+	}
+
+	logger.Info("[SHUTDOWN] Shutdown completed")
 }

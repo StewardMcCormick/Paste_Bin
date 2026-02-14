@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	http2 "github.com/StewardMcCormick/Paste_Bin/internal/controller/http"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,16 +9,19 @@ import (
 )
 
 var (
-	router = http2.Router(zap.L())
+	handler = NewHandler()
 )
 
-func TestHandler_HelloHandler(t *testing.T) {
+func TestHelloHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	handler.HelloHandler(w, req)
 
 	body, _ := io.ReadAll(w.Body)
 	assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-	assert.Equal(t, `{"message": "Hello world!"}`, string(body))
+	assert.Equal(t,
+		`{"message":"Hello world!"}`+"\n",
+		string(body),
+	)
 }

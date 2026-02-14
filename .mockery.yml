@@ -1,0 +1,12 @@
+all: false
+dir: '{{.InterfaceDir}}/mocks'
+filename: '{{.InterfaceName}}_mock.go'
+formatter: goimports
+generate: true
+structname: '{{.Mock}}{{.InterfaceName}}'
+pkgname: mocks
+template: testify
+packages:
+  github.com/StewardMcCormick/Paste_Bin/internal/controller/http:
+    interfaces:
+      Handler:
