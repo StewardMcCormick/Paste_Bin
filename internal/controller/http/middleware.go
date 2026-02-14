@@ -8,6 +8,16 @@ import (
 	"time"
 )
 
+type writerWithStatusCode struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (wc *writerWithStatusCode) WriteHeader(status int) {
+	wc.statusCode = status
+	wc.ResponseWriter.WriteHeader(status)
+}
+
 func LoggerMiddleware(logger *zap.Logger) func(handler http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -17,6 +27,7 @@ func LoggerMiddleware(logger *zap.Logger) func(handler http.Handler) http.Handle
 			if requestId == "" {
 				requestId = uuid.NewString()
 			}
+			wrapped := &writerWithStatusCode{w, http.StatusOK}
 
 			reqLogger := logger.With(
 				zap.String("request_id", requestId),
@@ -31,13 +42,14 @@ func LoggerMiddleware(logger *zap.Logger) func(handler http.Handler) http.Handle
 			ctx := context.WithValue(r.Context(), "logger", reqLogger)
 			ctx = context.WithValue(ctx, "request_id", requestId)
 
-			next.ServeHTTP(w, r.WithContext(ctx))
+			next.ServeHTTP(wrapped, r.WithContext(ctx))
 
 			duration := time.Since(start)
 
 			reqLogger.Info(
 				"[REQUEST COMPLETED]",
 				zap.Int64("duration_millis", duration.Milliseconds()),
+				zap.Int("status_code", wrapped.statusCode),
 			)
 		})
 	}

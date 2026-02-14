@@ -42,4 +42,8 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 
 	<-sig
 	server.Close()
+	err = logger.Sync()
+	if err != nil {
+		logger.Warn("Logger sync error when shouting down")
+	}
 }
