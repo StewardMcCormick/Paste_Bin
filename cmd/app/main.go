@@ -22,12 +22,12 @@ func main() {
 }
 
 func AppRun(ctx context.Context, cfg *config.Config) {
-	router := http.Router()
-
 	logger, err := logging.NewLogger(cfg.Logger, cfg.App.Env, cfg.App.Name, cfg.App.Version)
 	if err != nil {
 		panic(err)
 	}
+
+	router := http.Router(logger)
 
 	server := httpserver.New(router, &cfg.Server)
 
