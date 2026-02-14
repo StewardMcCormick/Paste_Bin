@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
+	"github.com/StewardMcCormick/Paste_Bin/pkg/logging"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
 )
@@ -9,11 +10,13 @@ import (
 type App struct {
 	Name    string `yaml:"name" env-required:"true"`
 	Version string `yaml:"version" env-required:"true"`
+	Env     string `yaml:"env" env-default:"prod"`
 }
 
 type Config struct {
 	App    App
 	Server httpserver.Config
+	Logger logging.Config
 }
 
 func InitConfig() (*Config, error) {

@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/StewardMcCormick/Paste_Bin/config"
-	"github.com/StewardMcCormick/Paste_Bin/internal/http/controller"
+	"github.com/StewardMcCormick/Paste_Bin/internal/controller/http"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
+	"github.com/StewardMcCormick/Paste_Bin/pkg/logging"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,10 +22,17 @@ func main() {
 }
 
 func AppRun(ctx context.Context, cfg *config.Config) {
-	router := controller.Router()
+	router := http.Router()
+
+	logger, err := logging.NewLogger(cfg.Logger, cfg.App.Env, cfg.App.Name, cfg.App.Version)
+	if err != nil {
+		panic(err)
+	}
 
 	server := httpserver.New(router, &cfg.Server)
-	err := server.Run()
+
+	logger.Info(fmt.Sprintf("Server starts on %s:%s", cfg.Server.Host, cfg.Server.Port))
+	err = server.Run()
 	if err != nil {
 		panic(err)
 	}
