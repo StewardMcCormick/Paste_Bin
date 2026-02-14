@@ -13,6 +13,7 @@ func Router(logger *zap.Logger) http.Handler {
 	h := handlers.NewHandler()
 
 	r.Use(LoggerMiddleware(logger))
+	r.Use(RecovererMiddleware)
 
 	r.Get("/", h.HelloHandler)
 

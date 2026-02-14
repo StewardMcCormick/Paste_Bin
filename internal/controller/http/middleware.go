@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"net/http"
@@ -16,6 +17,20 @@ type writerWithStatusCode struct {
 func (wc *writerWithStatusCode) WriteHeader(status int) {
 	wc.statusCode = status
 	wc.ResponseWriter.WriteHeader(status)
+}
+
+func RecovererMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				logger := r.Context().Value("logger").(*zap.Logger)
+				logger.Error(fmt.Sprintf("[ERROR] %v", fmt.Sprint(err)))
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+		}()
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func LoggerMiddleware(logger *zap.Logger) func(handler http.Handler) http.Handler {
