@@ -17,6 +17,7 @@ type connectionConfig struct {
 }
 
 type Config struct {
+	DbUrl            string
 	User             string           `env:"POSTGRES_USER" required:"true"`
 	Password         string           `env:"POSTGRES_PASSWORD" required:"true"`
 	Port             string           `env:"POSTGRES_PORT" env-default:"5432"`
@@ -29,8 +30,8 @@ type Pool struct {
 	pool *pgxpool.Pool
 }
 
-func New(ctx context.Context, cfg Config) (*Pool, error) {
-	dbUrl := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
+func New(ctx context.Context, cfg *Config) (*Pool, error) {
+	dbUrl := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DbName,
 	)
 
@@ -38,6 +39,7 @@ func New(ctx context.Context, cfg Config) (*Pool, error) {
 	if err != nil {
 		return nil, err
 	}
+	cfg.DbUrl = dbUrl
 
 	config.ConnConfig.ConnectTimeout = cfg.ConnectionConfig.ConnectionTimeout
 	config.MaxConns = cfg.ConnectionConfig.MaxConnections

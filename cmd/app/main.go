@@ -10,6 +10,7 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/internal/controller/HTTP/handlers"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/logging"
+	"github.com/StewardMcCormick/Paste_Bin/pkg/migrations"
 	"net/http"
 	"os"
 	"os/signal"
@@ -30,23 +31,30 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	if err != nil {
 		panic(err)
 	}
-	logger.Info("Logger initialization completed")
+	logger.Info("[START] Logger initialization completed")
 
-	logger.Info("PGX pool initialization...")
-	pool, err := postgres.New(ctx, cfg.Postgres)
+	logger.Info("[START] PGX pool initialization...")
+	pool, err := postgres.New(ctx, &cfg.Postgres)
 	if err != nil {
 		panic(err)
 	}
-	logger.Info("PGX initialization completed")
+	logger.Info("[START] PGX initialization completed")
 
-	logger.Info("Server initialization...")
+	logger.Info("[START] DataBase migrations executing...")
+	err = migrations.Exec(cfg.Postgres.DbUrl)
+	if err != nil {
+		panic(err)
+	}
+	logger.Info("[START] DataBase migrations executing completed")
+
+	logger.Info("[START] Server initialization...")
 	handler := handlers.NewHandler()
 	router := HTTP.NewRouter(handler, logger)
 
 	server := httpserver.New(router, &cfg.Server)
 
 	go func() {
-		logger.Info(fmt.Sprintf("Server starts on %s:%s", cfg.Server.Host, cfg.Server.Port))
+		logger.Info(fmt.Sprintf("[START] Server starts on %s:%s", cfg.Server.Host, cfg.Server.Port))
 		err = server.Run()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			panic(err)
