@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/StewardMcCormick/Paste_Bin/config"
+	"github.com/StewardMcCormick/Paste_Bin/internal/adapter/postgres"
 	"github.com/StewardMcCormick/Paste_Bin/internal/controller/HTTP"
 	"github.com/StewardMcCormick/Paste_Bin/internal/controller/HTTP/handlers"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
@@ -29,7 +30,16 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	if err != nil {
 		panic(err)
 	}
+	logger.Info("Logger initialization completed")
 
+	logger.Info("PGX pool initialization...")
+	pool, err := postgres.New(ctx, cfg.Postgres)
+	if err != nil {
+		panic(err)
+	}
+	logger.Info("PGX initialization completed")
+
+	logger.Info("Server initialization...")
 	handler := handlers.NewHandler()
 	router := HTTP.NewRouter(handler, logger)
 
@@ -49,18 +59,21 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	<-sig
 	logger.Info("[SHUTDOWN] Start shutting down...")
 
-	logger.Info("[SHUTDOWN] Start closing server...")
+	pool.Close()
+	logger.Info("[SHUTDOWN] PGX close completed")
+
 	err = server.Close()
 	if err != nil {
 		logger.Error(fmt.Sprintf("[SHUTDOWN] Server closing error: %v", err))
 	} else {
-		logger.Info("[SHUTDOWN] Server closed")
+		logger.Info("[SHUTDOWN] Server close completed")
 	}
 
 	err = logger.Sync()
 	if err != nil && !errors.Is(err, syscall.ENOTTY) && !errors.Is(err, syscall.EINVAL) && !errors.Is(err, syscall.EBADF) {
 		logger.Error(fmt.Sprintf("[SHUTDOWN] Log sync error: %v", err))
 	}
+	logger.Info("[SHUTDOWN] Logger sync completed")
 
 	logger.Info("[SHUTDOWN] Shutdown completed")
 }

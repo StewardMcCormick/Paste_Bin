@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/StewardMcCormick/Paste_Bin/internal/adapter/postgres"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/logging"
 	"github.com/ilyakaznacheev/cleanenv"
@@ -14,9 +15,10 @@ type App struct {
 }
 
 type Config struct {
-	App    App
-	Server httpserver.Config
-	Logger logging.Config
+	App      App
+	Server   httpserver.Config
+	Logger   logging.Config
+	Postgres postgres.Config
 }
 
 func InitConfig() (*Config, error) {
