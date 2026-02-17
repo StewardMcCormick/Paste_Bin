@@ -11,6 +11,7 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/logging"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/migrations"
+	"github.com/golang-migrate/migrate/v4"
 	"net/http"
 	"os"
 	"os/signal"
@@ -43,7 +44,11 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	logger.Info("[START] DataBase migrations executing...")
 	err = migrations.Exec(cfg.Postgres.DbUrl)
 	if err != nil {
-		panic(err)
+		if errors.Is(err, migrate.ErrNoChange) {
+			logger.Info("[START] Migrations - nothing to change")
+		} else {
+			panic(err)
+		}
 	}
 	logger.Info("[START] DataBase migrations executing completed")
 
