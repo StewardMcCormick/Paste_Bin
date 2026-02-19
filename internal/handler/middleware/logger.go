@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	httpUtil "github.com/StewardMcCormick/Paste_Bin/internal/util/http_util"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"net/http"
@@ -17,7 +18,7 @@ func LoggerMiddleware(logger *zap.Logger) func(handler http.Handler) http.Handle
 			if requestId == "" {
 				requestId = uuid.NewString()
 			}
-			wrapped := &writerWithStatusCode{w, http.StatusOK}
+			wrapped := &httpUtil.WriterWithStatusCode{ResponseWriter: w, StatusCode: http.StatusOK}
 
 			reqLogger := logger.With(
 				zap.String("request_id", requestId),
@@ -29,8 +30,8 @@ func LoggerMiddleware(logger *zap.Logger) func(handler http.Handler) http.Handle
 
 			reqLogger.Info("[NEW REQUEST]")
 
-			ctx := context.WithValue(r.Context(), loggerKey, reqLogger)
-			ctx = context.WithValue(ctx, requestIdKey, requestId)
+			ctx := context.WithValue(r.Context(), httpUtil.LoggerKey, reqLogger)
+			ctx = context.WithValue(ctx, httpUtil.RequestIdKey, requestId)
 
 			next.ServeHTTP(wrapped, r.WithContext(ctx))
 
@@ -39,7 +40,7 @@ func LoggerMiddleware(logger *zap.Logger) func(handler http.Handler) http.Handle
 			reqLogger.Info(
 				"[REQUEST COMPLETED]",
 				zap.Int64("duration_millis", duration.Milliseconds()),
-				zap.Int("status_code", wrapped.statusCode),
+				zap.Int("status_code", wrapped.StatusCode),
 			)
 		})
 	}

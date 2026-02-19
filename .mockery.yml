@@ -7,6 +7,7 @@ structname: '{{.Mock}}{{.InterfaceName}}'
 pkgname: mocks
 template: testify
 packages:
-  github.com/StewardMcCormick/Paste_Bin/internal/controller/http:
+  github.com/StewardMcCormick/Paste_Bin/internal/usecase/user:
     interfaces:
-      Handler:
+      Repository:
+      SecurityUtil:

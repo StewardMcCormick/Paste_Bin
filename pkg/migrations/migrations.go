@@ -9,7 +9,7 @@ import (
 
 func Exec(dbUrl string) error {
 	m, err := migrate.New(
-		"file://./internal/migrations/postgres",
+		"file://./internal/migrations/postgres", // TODO refactor - get migration`s path from cfg
 		dbUrl,
 	)
 	if err != nil {

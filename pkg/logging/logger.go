@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"github.com/StewardMcCormick/Paste_Bin/config/cfg_util"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -10,11 +11,11 @@ type Config struct {
 	Outputs []string `yaml:"outputs" env-required:"true"`
 }
 
-func NewLogger(cfg Config, env, appName, appVersion string) (*zap.Logger, error) {
+func NewLogger(cfg Config, env cfgUtil.Env, appName, appVersion string) (*zap.Logger, error) {
 	var loggerConfig zap.Config
 
 	switch env {
-	case "dev":
+	case cfgUtil.DevelopmentEnv:
 		loggerConfig = zap.NewDevelopmentConfig()
 	default:
 		loggerConfig = zap.NewProductionConfig()

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"github.com/StewardMcCormick/Paste_Bin/internal/util/http_util"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -27,7 +28,7 @@ func (s *LoggerMiddlewareTestSuite) Test_CreatingRequestId() {
 	var requestIdFromMiddleware string
 
 	handler := LoggerMiddleware(s.logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestIdFromMiddleware = r.Context().Value(requestIdKey).(string)
+		requestIdFromMiddleware = r.Context().Value(http_util.RequestIdKey).(string)
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -44,7 +45,7 @@ func (s *LoggerMiddlewareTestSuite) Test_WithExistingRequestId() {
 	var requestIdFromMiddleware string
 
 	handler := LoggerMiddleware(s.logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestIdFromMiddleware = r.Context().Value(requestIdKey).(string)
+		requestIdFromMiddleware = r.Context().Value(http_util.RequestIdKey).(string)
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -59,5 +60,3 @@ func (s *LoggerMiddlewareTestSuite) Test_WithExistingRequestId() {
 	_, err := uuid.Parse(requestIdFromMiddleware)
 	s.NoError(err)
 }
-
-//func (s *RecovererMiddlewareTestSuite) Test_

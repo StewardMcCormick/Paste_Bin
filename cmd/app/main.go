@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"github.com/StewardMcCormick/Paste_Bin/config"
 	"github.com/StewardMcCormick/Paste_Bin/internal/adapter/postgres"
-	"github.com/StewardMcCormick/Paste_Bin/internal/controller/HTTP"
-	"github.com/StewardMcCormick/Paste_Bin/internal/controller/HTTP/handlers"
+	"github.com/StewardMcCormick/Paste_Bin/internal/handler"
+	userH "github.com/StewardMcCormick/Paste_Bin/internal/handler/user"
+	userRepo "github.com/StewardMcCormick/Paste_Bin/internal/repository/user"
+	userUseCase "github.com/StewardMcCormick/Paste_Bin/internal/usecase/user"
+	"github.com/StewardMcCormick/Paste_Bin/internal/util/security"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/logging"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/migrations"
@@ -27,6 +30,8 @@ func main() {
 	AppRun(context.Background(), cfg)
 }
 
+// tests for already done components -> validation + tests (middleware) -> logging in -> ... TODO
+
 func AppRun(ctx context.Context, cfg *config.Config) {
 	logger, err := logging.NewLogger(cfg.Logger, cfg.App.Env, cfg.App.Name, cfg.App.Version)
 	if err != nil {
@@ -35,7 +40,7 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	logger.Info("[START] Logger initialization completed")
 
 	logger.Info("[START] PGX pool initialization...")
-	pool, err := postgres.New(ctx, &cfg.Postgres)
+	pool, err := postgres.NewPool(ctx, &cfg.Postgres)
 	if err != nil {
 		panic(err)
 	}
@@ -52,10 +57,13 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	}
 	logger.Info("[START] DataBase migrations executing completed")
 
-	logger.Info("[START] Server initialization...")
-	handler := handlers.NewHandler()
-	router := HTTP.NewRouter(handler, logger)
+	userRepository := userRepo.NewRepository(pool)
+	securityUtil := security.NewUtil()
+	userUC := userUseCase.NewUseCase(userRepository, securityUtil, cfg.Auth)
 
+	logger.Info("[START] Server initialization...")
+	userHandler := userH.NewHandler(userUC)
+	router := handler.NewRouter(userHandler, logger, cfg.App.Env)
 	server := httpserver.New(router, &cfg.Server)
 
 	go func() {
@@ -77,14 +85,13 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 
 	err = server.Close()
 	if err != nil {
-		logger.Error(fmt.Sprintf("[SHUTDOWN] Server closing error: %v", err))
-	} else {
-		logger.Info("[SHUTDOWN] Server close completed")
+		logger.Panic(fmt.Sprintf("[SHUTDOWN] Server closing error: %v", err))
 	}
+	logger.Info("[SHUTDOWN] Server close completed")
 
 	err = logger.Sync()
 	if err != nil && !errors.Is(err, syscall.ENOTTY) && !errors.Is(err, syscall.EINVAL) && !errors.Is(err, syscall.EBADF) {
-		logger.Error(fmt.Sprintf("[SHUTDOWN] Log sync error: %v", err))
+		logger.Panic(fmt.Sprintf("[SHUTDOWN] Log sync error: %v", err))
 	}
 	logger.Info("[SHUTDOWN] Logger sync completed")
 

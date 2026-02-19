@@ -1,7 +1,9 @@
 package config
 
 import (
+	"github.com/StewardMcCormick/Paste_Bin/config/cfg_util"
 	"github.com/StewardMcCormick/Paste_Bin/internal/adapter/postgres"
+	"github.com/StewardMcCormick/Paste_Bin/internal/usecase/user"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/logging"
 	"github.com/ilyakaznacheev/cleanenv"
@@ -9,9 +11,9 @@ import (
 )
 
 type App struct {
-	Name    string `yaml:"name" env-required:"true"`
-	Version string `yaml:"version" env-required:"true"`
-	Env     string `yaml:"env" env-default:"prod"`
+	Name    string      `yaml:"name" env-required:"true"`
+	Version string      `yaml:"version" env-required:"true"`
+	Env     cfgUtil.Env `yaml:"env" env-default:"prod"`
 }
 
 type Config struct {
@@ -19,6 +21,7 @@ type Config struct {
 	Server   httpserver.Config
 	Logger   logging.Config
 	Postgres postgres.Config
+	Auth     user.Config
 }
 
 func InitConfig() (*Config, error) {
