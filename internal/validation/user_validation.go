@@ -4,6 +4,7 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
 	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
 	"github.com/go-playground/validator/v10"
+	"net/http"
 )
 
 var (
@@ -12,11 +13,15 @@ var (
 	MaxLengthMessage     = "Maximum length - "
 )
 
-type UserValidator struct {
+type userValidator struct {
 	valid *validator.Validate
 }
 
-func (uv *UserValidator) Validate(user *dto.CreateUserRequest) error {
+func NewUserValidator(valid *validator.Validate) *userValidator {
+	return &userValidator{valid: valid}
+}
+
+func (uv *userValidator) Validate(user *dto.CreateUserRequest) error {
 	if err := uv.valid.Struct(user); err != nil {
 		return uv.mapValidErrorToCustomError(err.(validator.ValidationErrors))
 	}
@@ -24,13 +29,10 @@ func (uv *UserValidator) Validate(user *dto.CreateUserRequest) error {
 	return nil
 }
 
-func NewUserValidator(valid *validator.Validate) *UserValidator {
-	return &UserValidator{valid: valid}
-}
-
-func (uv *UserValidator) mapValidErrorToCustomError(err validator.ValidationErrors) error {
+func (uv *userValidator) mapValidErrorToCustomError(err validator.ValidationErrors) error {
 	ve := errs.ValidationError{
 		Message: errs.UserValidationError.Error(),
+		Status:  http.StatusBadRequest,
 		Errors:  make([]errs.ValidationFieldError, len(err)),
 	}
 
@@ -45,7 +47,7 @@ func (uv *UserValidator) mapValidErrorToCustomError(err validator.ValidationErro
 	return ve
 }
 
-func (uv *UserValidator) convertTagToMessage(fe validator.FieldError) string {
+func (uv *userValidator) convertTagToMessage(fe validator.FieldError) string {
 	switch fe.Tag() {
 	case "required":
 		return RequiredFieldMessage

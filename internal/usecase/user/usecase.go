@@ -7,7 +7,6 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
 	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
 	appctx "github.com/StewardMcCormick/Paste_Bin/internal/util/app_context"
-	"github.com/StewardMcCormick/Paste_Bin/internal/validation"
 	"time"
 )
 
@@ -26,14 +25,18 @@ type SecurityUtil interface {
 	GenerateAPIKey(ctx context.Context) (keyPrefix string, key string, err error)
 }
 
+type Validator interface {
+	Validate(request *dto.CreateUserRequest) error
+}
+
 type UseCase struct {
 	repo         Repository
 	securityUtil SecurityUtil
-	valid        *validation.UserValidator
+	valid        Validator
 	cfg          Config
 }
 
-func NewUseCase(repo Repository, securityUtil SecurityUtil, valid *validation.UserValidator, cfg Config) *UseCase {
+func NewUseCase(repo Repository, securityUtil SecurityUtil, valid Validator, cfg Config) *UseCase {
 	return &UseCase{
 		repo:         repo,
 		securityUtil: securityUtil,

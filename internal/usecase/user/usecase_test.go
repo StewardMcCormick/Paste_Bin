@@ -9,8 +9,6 @@ import (
 	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
 	"github.com/StewardMcCormick/Paste_Bin/internal/usecase/user/mocks"
 	appctx "github.com/StewardMcCormick/Paste_Bin/internal/util/app_context"
-	"github.com/StewardMcCormick/Paste_Bin/internal/validation"
-	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"strings"
@@ -22,6 +20,7 @@ type UseCaseTestSuite struct {
 	suite.Suite
 	repo     *mocks.MockRepository
 	security *mocks.MockSecurityUtil
+	valid    *mocks.MockValidator
 	useCase  *UseCase
 }
 
@@ -32,8 +31,9 @@ func TestUseCaseSuite(t *testing.T) {
 func (s *UseCaseTestSuite) SetupTest() {
 	s.repo = mocks.NewMockRepository(s.T())
 	s.security = mocks.NewMockSecurityUtil(s.T())
+	s.valid = mocks.NewMockValidator(s.T())
 	s.useCase = NewUseCase(s.repo, s.security,
-		validation.NewUserValidator(validator.New(validator.WithRequiredStructEnabled())),
+		s.valid,
 		Config{APIKeyExpireDuration: 162 * time.Hour},
 	)
 }
@@ -51,6 +51,11 @@ func (s *UseCaseTestSuite) Test_Registration_Success() {
 		},
 		CreatedAt: now,
 	}
+
+	s.valid.EXPECT().
+		Validate(mock.Anything).
+		Return(nil).
+		Once()
 
 	s.repo.EXPECT().
 		Exists(mock.Anything, mock.Anything).
@@ -99,6 +104,11 @@ func (s *UseCaseTestSuite) Test_Registration_NotValidationError() {
 		{
 			"Check user existing - Already Exists Error",
 			func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
 				s.repo.EXPECT().
 					Exists(mock.Anything, mock.Anything).
 					Return(true, nil).
@@ -109,6 +119,11 @@ func (s *UseCaseTestSuite) Test_Registration_NotValidationError() {
 		{
 			"Check user existing - Internal Error",
 			func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
 				s.repo.EXPECT().
 					Exists(mock.Anything, mock.Anything).
 					Return(false, errors.New("db error")).
@@ -119,6 +134,11 @@ func (s *UseCaseTestSuite) Test_Registration_NotValidationError() {
 		{
 			"Hashing password error",
 			func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
 				s.repo.EXPECT().
 					Exists(mock.Anything, mock.Anything).
 					Return(false, nil).
@@ -134,6 +154,11 @@ func (s *UseCaseTestSuite) Test_Registration_NotValidationError() {
 		{
 			"Generate API Key error",
 			func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
 				s.repo.EXPECT().
 					Exists(mock.Anything, mock.Anything).
 					Return(false, nil).
@@ -154,6 +179,11 @@ func (s *UseCaseTestSuite) Test_Registration_NotValidationError() {
 		{
 			"Registration internal error",
 			func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
 				s.repo.EXPECT().
 					Exists(mock.Anything, mock.Anything).
 					Return(false, nil).
@@ -199,5 +229,57 @@ func (s *UseCaseTestSuite) Test_Registration_NotValidationError() {
 }
 
 func (s *UseCaseTestSuite) Test_Registration_ValidationError() {
+	cases := []struct {
+		name      string
+		value     *dto.CreateUserRequest
+		setupMock func()
+		wantErr   error
+	}{
+		{
+			name:  "user with empty fields",
+			value: &dto.CreateUserRequest{Username: "", Password: ""},
+			setupMock: func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(errors.New("user with empty fields error")).
+					Once()
+			},
+			wantErr: errors.New("user with empty fields error"),
+		},
+		{
+			name:  "user with too short fields",
+			value: &dto.CreateUserRequest{Username: "Us", Password: "pass"},
+			setupMock: func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(errors.New("user with too short fields error")).
+					Once()
+			},
+			wantErr: errors.New("user with too short fields error"),
+		},
+		{
+			name:  "user with too long fields",
+			value: &dto.CreateUserRequest{Username: "too_long_field", Password: "too_long_password"},
+			setupMock: func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(errors.New("user with too long fields error")).
+					Once()
+			},
+			wantErr: errors.New("user with too long fields error"),
+		},
+	}
 
+	for _, tc := range cases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			s.SetupTest()
+			tc.setupMock()
+
+			result, err := s.useCase.Registration(context.Background(), tc.value)
+
+			s.Nil(result)
+			s.NotNil(err)
+			s.Equal(err, tc.wantErr)
+		})
+	}
 }

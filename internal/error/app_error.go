@@ -24,7 +24,6 @@ func SendAppError(ctx context.Context, w http.ResponseWriter, status int, messag
 
 	var validErr ValidationError
 	if errors.As(message, &validErr) {
-		validErr.Status = status
 		response = validErr
 	} else {
 		response = BaseError{Message: message.Error(), Status: status}
