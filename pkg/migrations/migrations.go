@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"fmt"
 	"github.com/golang-migrate/migrate/v4"
 
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -9,7 +10,7 @@ import (
 
 func Exec(dbUrl string, migrationsPath string) error {
 	m, err := migrate.New(
-		"file://"+migrationsPath, // TODO refactor - get migration`s path from cfg
+		fmt.Sprintf("file://%s", migrationsPath),
 		dbUrl,
 	)
 	if err != nil {
