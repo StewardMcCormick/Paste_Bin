@@ -15,12 +15,14 @@ func NewRouter(
 	logMid mid.Logging,
 	recovererMid mid.Recoverer,
 	envMid mid.Environmental,
+	validMid mid.JSONValidation,
 ) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(logMid.Handler)
 	r.Use(recovererMid.Handler)
 	r.Use(envMid.Handler)
+	r.Use(validMid.Handler)
 
 	r.Post("/user", userHandler.Registration)
 

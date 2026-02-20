@@ -5,7 +5,8 @@ import (
 	"errors"
 	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
 	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
-	"github.com/StewardMcCormick/Paste_Bin/internal/handler"
+	"github.com/StewardMcCormick/Paste_Bin/pkg/render"
+	"github.com/go-playground/validator/v10"
 	"net/http"
 )
 
@@ -16,19 +17,18 @@ func (h *httpHandlers) Registration(w http.ResponseWriter, r *http.Request) {
 	user, err := h.UserUseCase.Registration(r.Context(), &userRequest)
 	if err != nil {
 		if errors.Is(err, errs.UserAlreadyExists) {
-			handler.SendError(r.Context(), w, http.StatusConflict, err)
+			errs.SendHTTPError(r.Context(), w, http.StatusConflict, err)
 			return
 		} else if errors.Is(err, errs.InternalError) {
-			handler.SendError(r.Context(), w, http.StatusInternalServerError, err)
+			errs.SendHTTPError(r.Context(), w, http.StatusInternalServerError, err)
+			return
+		} else if errors.As(err, &validator.ValidationErrors{}) {
+			errs.SendValidationError(r.Context(), w, http.StatusBadRequest, err.(validator.ValidationErrors))
 			return
 		}
-		handler.SendError(r.Context(), w, http.StatusBadRequest, err)
+		errs.SendHTTPError(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(user)
-	if err != nil {
-		handler.SendError(r.Context(), w, http.StatusInternalServerError, err)
-		return
-	}
+	render.JSON(w, user)
 }

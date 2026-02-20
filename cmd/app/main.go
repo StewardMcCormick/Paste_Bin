@@ -15,6 +15,7 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/logging"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/migrations"
+	"github.com/go-playground/validator/v10"
 	"github.com/golang-migrate/migrate/v4"
 	"net/http"
 	"os"
@@ -60,13 +61,15 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 
 	userRepository := userRepo.NewRepository(pool)
 	securityUtil := security.NewUtil()
-	userUC := userUseCase.NewUseCase(userRepository, securityUtil, cfg.Auth)
+	valid := validator.New(validator.WithRequiredStructEnabled())
+	userUC := userUseCase.NewUseCase(userRepository, securityUtil, valid, cfg.Auth)
 
 	logger.Info("[START] Server initialization...")
 
 	logMid := middleware.NewLogging(logger)
 	recoverMid := middleware.NewRecoverer()
 	envMid := middleware.NewEnv(cfg.App.Env)
+	validMid := middleware.NewJSONValidation()
 
 	userHandler := userH.NewHandler(userUC)
 	router := handler.NewRouter(
@@ -74,6 +77,7 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 		logMid,
 		recoverMid,
 		envMid,
+		validMid,
 	)
 	server := httpserver.New(router, &cfg.Server)
 
