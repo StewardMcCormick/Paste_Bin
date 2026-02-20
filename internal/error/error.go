@@ -2,7 +2,6 @@ package error
 
 import (
 	"errors"
-	"fmt"
 )
 
 var (
@@ -19,7 +18,7 @@ type BaseError struct {
 }
 
 func (r BaseError) Error() string {
-	return fmt.Sprint(r)
+	return r.Message
 }
 
 func (r BaseError) Code() int {

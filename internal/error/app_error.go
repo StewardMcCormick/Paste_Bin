@@ -16,6 +16,10 @@ type AppError interface {
 func SendAppError(ctx context.Context, w http.ResponseWriter, status int, message error) {
 	log := util.GetLoggerFromCtx(ctx)
 
+	if !errors.Is(message, InternalError) {
+		log.Info(message.Error())
+	}
+
 	var response AppError
 
 	var validErr ValidationError
@@ -34,5 +38,4 @@ func SendAppError(ctx context.Context, w http.ResponseWriter, status int, messag
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	log.Info(message.Error())
 }

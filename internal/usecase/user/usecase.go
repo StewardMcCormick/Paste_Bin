@@ -51,6 +51,7 @@ func (uc *UseCase) Registration(ctx context.Context, user *dto.CreateUserRequest
 
 	exists, err := uc.repo.Exists(ctx, user.Username)
 	if err != nil {
+		log.Error(err.Error())
 		return nil, fmt.Errorf("%w - database error", errs.InternalError)
 	}
 	if exists {
@@ -59,10 +60,12 @@ func (uc *UseCase) Registration(ctx context.Context, user *dto.CreateUserRequest
 
 	hashedPass, err := uc.securityUtil.HashPassword(user.Password)
 	if err != nil {
+		log.Error(err.Error())
 		return nil, fmt.Errorf("%w - hashing password error", errs.InternalError)
 	}
 	prefix, apiKey, err := uc.securityUtil.GenerateAPIKey(ctx)
 	if err != nil {
+		log.Error(err.Error())
 		return nil, fmt.Errorf("%w - generate API Key error", errs.InternalError)
 	}
 	hashedKey := uc.securityUtil.HashAPIKey(apiKey)
