@@ -39,7 +39,7 @@ func (a *Auth) Handler(next http.Handler) http.Handler {
 		userId, err := a.auth.Authenticate(r.Context(), key)
 		if err != nil {
 			if errors.Is(err, errs.Unauthorized) {
-				errs.SendAppError(r.Context(), w, http.StatusUnauthorized, errs.Unauthorized)
+				errs.SendAppError(r.Context(), w, http.StatusUnauthorized, err)
 				return
 			}
 

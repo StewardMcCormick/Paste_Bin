@@ -209,7 +209,7 @@ func (uc *UseCase) Authenticate(ctx context.Context, apiKey string) (userId int6
 		return 0, fmt.Errorf("%w - find key error", errs.InternalError)
 	}
 	if key == nil || key.ExpiresAt.Compare(time.Now()) <= 0 {
-		log.Debug(fmt.Sprintf("%v", key))
+		log.Debug(fmt.Sprintf("Key from DB - %v", key))
 		log.Info(fmt.Sprintf("authentication failed"))
 		return 0, fmt.Errorf("%w - key invalid or expired - you should get a new key", errs.Unauthorized)
 	}
