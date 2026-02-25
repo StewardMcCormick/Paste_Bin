@@ -13,3 +13,7 @@ type UserResponse struct {
 	APIKey    APIKeyResponse `json:"api_key"`
 	CreatedAt time.Time      `json:"created_at"`
 }
+
+type LoginResponse struct {
+	APIKeyResponse
+}

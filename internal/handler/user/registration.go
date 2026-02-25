@@ -3,15 +3,16 @@ package user
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
+
 	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
 	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/render"
 	"github.com/go-playground/validator/v10"
-	"net/http"
 )
 
 func (h *httpHandlers) Registration(w http.ResponseWriter, r *http.Request) {
-	var userRequest dto.CreateUserRequest
+	var userRequest dto.UserRequest
 	json.NewDecoder(r.Body).Decode(&userRequest)
 
 	user, err := h.UserUseCase.Registration(r.Context(), &userRequest)

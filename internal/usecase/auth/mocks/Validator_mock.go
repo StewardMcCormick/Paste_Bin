@@ -37,7 +37,7 @@ func (_m *MockValidator) EXPECT() *MockValidator_Expecter {
 }
 
 // Validate provides a mock function for the type MockValidator
-func (_mock *MockValidator) Validate(request *dto.CreateUserRequest) error {
+func (_mock *MockValidator) Validate(request *dto.UserRequest) error {
 	ret := _mock.Called(request)
 
 	if len(ret) == 0 {
@@ -45,7 +45,7 @@ func (_mock *MockValidator) Validate(request *dto.CreateUserRequest) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*dto.CreateUserRequest) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(*dto.UserRequest) error); ok {
 		r0 = returnFunc(request)
 	} else {
 		r0 = ret.Error(0)
@@ -59,16 +59,16 @@ type MockValidator_Validate_Call struct {
 }
 
 // Validate is a helper method to define mock.On call
-//   - request *dto.CreateUserRequest
+//   - request *dto.UserRequest
 func (_e *MockValidator_Expecter) Validate(request interface{}) *MockValidator_Validate_Call {
 	return &MockValidator_Validate_Call{Call: _e.mock.On("Validate", request)}
 }
 
-func (_c *MockValidator_Validate_Call) Run(run func(request *dto.CreateUserRequest)) *MockValidator_Validate_Call {
+func (_c *MockValidator_Validate_Call) Run(run func(request *dto.UserRequest)) *MockValidator_Validate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *dto.CreateUserRequest
+		var arg0 *dto.UserRequest
 		if args[0] != nil {
-			arg0 = args[0].(*dto.CreateUserRequest)
+			arg0 = args[0].(*dto.UserRequest)
 		}
 		run(
 			arg0,
@@ -82,7 +82,7 @@ func (_c *MockValidator_Validate_Call) Return(err error) *MockValidator_Validate
 	return _c
 }
 
-func (_c *MockValidator_Validate_Call) RunAndReturn(run func(request *dto.CreateUserRequest) error) *MockValidator_Validate_Call {
+func (_c *MockValidator_Validate_Call) RunAndReturn(run func(request *dto.UserRequest) error) *MockValidator_Validate_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -1,0 +1,467 @@
+package auth
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+	"time"
+
+	cfgUtil "github.com/StewardMcCormick/Paste_Bin/config/cfg_util"
+	"github.com/StewardMcCormick/Paste_Bin/internal/domain"
+	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
+	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
+	repoMocks "github.com/StewardMcCormick/Paste_Bin/internal/repository/mocks"
+	ucMocks "github.com/StewardMcCormick/Paste_Bin/internal/usecase/auth/mocks"
+	appctx "github.com/StewardMcCormick/Paste_Bin/internal/util/app_context"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
+)
+
+type UseCaseTestSuite struct {
+	suite.Suite
+	uowFactory *ucMocks.MockUnitOfWorkFactory
+	noTxUow    *repoMocks.MockNoTxUnitOfWork
+	txUow      *repoMocks.MockTxUnitOfWork
+	apiKeyRepo *repoMocks.MockAPIKeyRepository
+	userRepo   *repoMocks.MockUserRepository
+	security   *ucMocks.MockSecurityUtil
+	valid      *ucMocks.MockValidator
+	useCase    *UseCase
+}
+
+func TestUseCaseSuite(t *testing.T) {
+	suite.Run(t, new(UseCaseTestSuite))
+}
+
+func (s *UseCaseTestSuite) SetupTest() {
+	s.uowFactory = ucMocks.NewMockUnitOfWorkFactory(s.T())
+	s.noTxUow = repoMocks.NewMockNoTxUnitOfWork(s.T())
+	s.txUow = repoMocks.NewMockTxUnitOfWork(s.T())
+	s.apiKeyRepo = repoMocks.NewMockAPIKeyRepository(s.T())
+	s.userRepo = repoMocks.NewMockUserRepository(s.T())
+
+	s.security = ucMocks.NewMockSecurityUtil(s.T())
+	s.valid = ucMocks.NewMockValidator(s.T())
+
+	s.useCase = NewUseCase(s.uowFactory, s.security,
+		s.valid,
+		Config{APIKeyExpireDuration: 162 * time.Hour},
+	)
+
+	s.setupExpectsForUow()
+}
+
+func (s *UseCaseTestSuite) setupExpectsForUow() {
+	s.txUow.EXPECT().
+		UserRepository().
+		Return(s.userRepo).
+		Maybe()
+
+	s.txUow.EXPECT().
+		APIKeyRepository().
+		Return(s.apiKeyRepo).
+		Maybe()
+
+	s.noTxUow.EXPECT().
+		UserRepository().
+		Return(s.userRepo).
+		Maybe()
+
+	s.noTxUow.EXPECT().
+		APIKeyRepository().
+		Return(s.apiKeyRepo).
+		Maybe()
+}
+
+func (s *UseCaseTestSuite) expectBeginTx() {
+	s.uowFactory.EXPECT().
+		Begin(mock.Anything).
+		Return(s.txUow, nil).
+		Once()
+}
+
+func (s *UseCaseTestSuite) expectCommitTx() {
+	s.txUow.EXPECT().
+		Commit(mock.Anything).
+		Return(nil).
+		Once()
+}
+
+func (s *UseCaseTestSuite) expectRollbackTx() {
+	s.txUow.EXPECT().
+		Rollback(mock.Anything).
+		Return().
+		Once()
+}
+
+func (s *UseCaseTestSuite) expectTx() {
+	s.expectBeginTx()
+	s.expectRollbackTx()
+	s.expectCommitTx()
+}
+
+func (s *UseCaseTestSuite) Test_Registration_Success() {
+	now := time.Now()
+	expectedUser := &domain.User{
+		Id:        0,
+		Username:  "test",
+		Password:  "test_pass",
+		CreatedAt: now,
+	}
+
+	expectedApiKey := &domain.APIKey{
+		Key:       "hashed_key",
+		Prefix:    "pb_test",
+		ExpiresAt: now.Add(s.useCase.cfg.APIKeyExpireDuration),
+	}
+
+	s.expectTx()
+
+	s.valid.EXPECT().
+		Validate(mock.Anything).
+		Return(nil).
+		Once()
+
+	s.userRepo.EXPECT().
+		Exists(mock.Anything, mock.Anything).
+		Return(false, nil).
+		Once()
+
+	s.security.EXPECT().
+		HashPassword(mock.Anything).
+		Return("hashed_pass", nil).
+		Once()
+
+	s.security.EXPECT().
+		GenerateAPIKey(mock.Anything).
+		Return("pb_test", "pb_test_api-key", nil).
+		Once()
+
+	s.security.EXPECT().
+		HashAPIKey(mock.Anything).
+		Return("hashed_key").
+		Once()
+
+	s.userRepo.EXPECT().
+		Create(mock.Anything, mock.Anything).
+		Return(expectedUser, nil).
+		Once()
+
+	s.apiKeyRepo.EXPECT().
+		Create(mock.Anything, mock.Anything, mock.Anything).
+		Return(expectedApiKey, nil).
+		Once()
+
+	ctx := context.WithValue(context.Background(), appctx.EnvKey, cfgUtil.DevelopmentEnv)
+	result, err := s.useCase.Registration(ctx,
+		&dto.UserRequest{Username: expectedUser.Username, Password: expectedUser.Password})
+
+	s.NoError(err)
+	s.Equal(expectedUser.Id, result.Id)
+	s.Equal(expectedUser.Username, result.Username)
+	s.Equal(expectedApiKey.Key, result.APIKey.Key)
+	s.Equal(expectedApiKey.ExpiresAt, result.APIKey.ExpiresAt)
+	s.True(strings.HasPrefix(result.APIKey.Key, expectedApiKey.Prefix))
+	s.NotNil(result.CreatedAt)
+}
+
+func (s *UseCaseTestSuite) Test_Registration_NotValidationError() {
+	cases := []struct {
+		name       string
+		setupMocks func()
+		wantError  error
+	}{
+		{
+			"Check user existing - Already Exists Error",
+			func() {
+				s.expectBeginTx()
+				s.expectRollbackTx()
+
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.userRepo.EXPECT().
+					Exists(mock.Anything, mock.Anything).
+					Return(true, nil).
+					Once()
+
+			},
+			errs.UserAlreadyExists,
+		},
+		{
+			"Check auth existing - Internal Error",
+			func() {
+				s.expectBeginTx()
+				s.expectRollbackTx()
+
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.userRepo.EXPECT().
+					Exists(mock.Anything, mock.Anything).
+					Return(false, errors.New("db error")).
+					Once()
+
+			},
+			errs.InternalError,
+		},
+		{
+			"Hashing password error",
+			func() {
+				s.expectBeginTx()
+				s.expectRollbackTx()
+
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.userRepo.EXPECT().
+					Exists(mock.Anything, mock.Anything).
+					Return(false, nil).
+					Once()
+
+				s.security.EXPECT().
+					HashPassword(mock.Anything).
+					Return("", errors.New("hashing error")).
+					Once()
+
+			},
+			errs.InternalError,
+		},
+		{
+			"Generate API Key error",
+			func() {
+				s.expectBeginTx()
+				s.expectRollbackTx()
+
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.userRepo.EXPECT().
+					Exists(mock.Anything, mock.Anything).
+					Return(false, nil).
+					Once()
+
+				s.security.EXPECT().
+					HashPassword(mock.Anything).
+					Return("hash", nil).
+					Once()
+
+				s.security.EXPECT().
+					GenerateAPIKey(mock.Anything).
+					Return("", "", errors.New("generate API Key error")).
+					Once()
+
+			},
+			errs.InternalError,
+		},
+		{
+			"User create error",
+			func() {
+				s.expectBeginTx()
+				s.expectRollbackTx()
+
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.userRepo.EXPECT().
+					Exists(mock.Anything, mock.Anything).
+					Return(false, nil).
+					Once()
+
+				s.security.EXPECT().
+					HashPassword(mock.Anything).
+					Return("hash", nil).
+					Once()
+
+				s.security.EXPECT().
+					GenerateAPIKey(mock.Anything).
+					Return("pb_test", "key", nil).
+					Once()
+
+				s.security.EXPECT().
+					HashAPIKey(mock.Anything).
+					Return("key_hash").
+					Once()
+
+				s.userRepo.EXPECT().
+					Create(mock.Anything, mock.Anything).
+					Return(nil, errors.New("user error")).
+					Once()
+
+			},
+			errs.InternalError,
+		},
+		{
+			"API key create error",
+			func() {
+				s.expectBeginTx()
+				s.expectRollbackTx()
+
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.userRepo.EXPECT().
+					Exists(mock.Anything, mock.Anything).
+					Return(false, nil).
+					Once()
+
+				s.security.EXPECT().
+					HashPassword(mock.Anything).
+					Return("hash", nil).
+					Once()
+
+				s.security.EXPECT().
+					GenerateAPIKey(mock.Anything).
+					Return("pb_test", "key", nil).
+					Once()
+
+				s.security.EXPECT().
+					HashAPIKey(mock.Anything).
+					Return("key_hash").
+					Once()
+
+				s.userRepo.EXPECT().
+					Create(mock.Anything, mock.Anything).
+					Return(&domain.User{}, nil).
+					Once()
+
+				s.apiKeyRepo.EXPECT().
+					Create(mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, errors.New("API key error")).
+					Once()
+
+			},
+			errs.InternalError,
+		},
+		{
+			"Commit Error",
+			func() {
+				s.expectBeginTx()
+				s.expectRollbackTx()
+
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.userRepo.EXPECT().
+					Exists(mock.Anything, mock.Anything).
+					Return(false, nil).
+					Once()
+
+				s.security.EXPECT().
+					HashPassword(mock.Anything).
+					Return("hash", nil).
+					Once()
+
+				s.security.EXPECT().
+					GenerateAPIKey(mock.Anything).
+					Return("pb_test", "key", nil).
+					Once()
+
+				s.security.EXPECT().
+					HashAPIKey(mock.Anything).
+					Return("key_hash").
+					Once()
+
+				s.userRepo.EXPECT().
+					Create(mock.Anything, mock.Anything).
+					Return(&domain.User{}, nil).
+					Once()
+
+				s.apiKeyRepo.EXPECT().
+					Create(mock.Anything, mock.Anything, mock.Anything).
+					Return(&domain.APIKey{}, nil).
+					Once()
+
+				s.txUow.EXPECT().
+					Commit(mock.Anything).
+					Return(errors.New("commit error"))
+			},
+			errs.InternalError,
+		},
+	}
+
+	for _, tc := range cases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			s.SetupTest()
+			tc.setupMocks()
+			result, err := s.useCase.Registration(context.Background(),
+				&dto.UserRequest{Username: "test", Password: "test_pass"},
+			)
+
+			s.Nil(result)
+			s.NotNil(err)
+			s.ErrorIs(err, tc.wantError)
+		})
+	}
+}
+
+func (s *UseCaseTestSuite) Test_Registration_ValidationError() {
+	cases := []struct {
+		name      string
+		value     *dto.UserRequest
+		setupMock func()
+		wantErr   error
+	}{
+		{
+			name:  "auth with empty fields",
+			value: &dto.UserRequest{Username: "", Password: ""},
+			setupMock: func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(errors.New("auth with empty fields error")).
+					Once()
+			},
+			wantErr: errors.New("auth with empty fields error"),
+		},
+		{
+			name:  "auth with too short fields",
+			value: &dto.UserRequest{Username: "Us", Password: "pass"},
+			setupMock: func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(errors.New("auth with too short fields error")).
+					Once()
+			},
+			wantErr: errors.New("auth with too short fields error"),
+		},
+		{
+			name:  "auth with too long fields",
+			value: &dto.UserRequest{Username: "too_long_field", Password: "too_long_password"},
+			setupMock: func() {
+				s.valid.EXPECT().
+					Validate(mock.Anything).
+					Return(errors.New("auth with too long fields error")).
+					Once()
+			},
+			wantErr: errors.New("auth with too long fields error"),
+		},
+	}
+
+	for _, tc := range cases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			s.SetupTest()
+			tc.setupMock()
+
+			result, err := s.useCase.Registration(context.Background(), tc.value)
+
+			s.Nil(result)
+			s.NotNil(err)
+			s.Equal(err, tc.wantErr)
+		})
+	}
+}

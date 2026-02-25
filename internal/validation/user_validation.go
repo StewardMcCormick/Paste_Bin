@@ -21,7 +21,7 @@ func NewUserValidator(valid *validator.Validate) *userValidator {
 	return &userValidator{valid: valid}
 }
 
-func (uv *userValidator) Validate(user *dto.CreateUserRequest) error {
+func (uv *userValidator) Validate(user *dto.UserRequest) error {
 	if err := uv.valid.Struct(user); err != nil {
 		return uv.mapValidErrorToCustomError(err.(validator.ValidationErrors))
 	}

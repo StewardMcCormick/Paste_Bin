@@ -37,6 +37,63 @@ func (_m *MockSecurityUtil) EXPECT() *MockSecurityUtil_Expecter {
 	return &MockSecurityUtil_Expecter{mock: &_m.Mock}
 }
 
+// CompareHashAndPassword provides a mock function for the type MockSecurityUtil
+func (_mock *MockSecurityUtil) CompareHashAndPassword(hash string, pass string) bool {
+	ret := _mock.Called(hash, pass)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CompareHashAndPassword")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func(string, string) bool); ok {
+		r0 = returnFunc(hash, pass)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// MockSecurityUtil_CompareHashAndPassword_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CompareHashAndPassword'
+type MockSecurityUtil_CompareHashAndPassword_Call struct {
+	*mock.Call
+}
+
+// CompareHashAndPassword is a helper method to define mock.On call
+//   - hash string
+//   - pass string
+func (_e *MockSecurityUtil_Expecter) CompareHashAndPassword(hash interface{}, pass interface{}) *MockSecurityUtil_CompareHashAndPassword_Call {
+	return &MockSecurityUtil_CompareHashAndPassword_Call{Call: _e.mock.On("CompareHashAndPassword", hash, pass)}
+}
+
+func (_c *MockSecurityUtil_CompareHashAndPassword_Call) Run(run func(hash string, pass string)) *MockSecurityUtil_CompareHashAndPassword_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSecurityUtil_CompareHashAndPassword_Call) Return(b bool) *MockSecurityUtil_CompareHashAndPassword_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *MockSecurityUtil_CompareHashAndPassword_Call) RunAndReturn(run func(hash string, pass string) bool) *MockSecurityUtil_CompareHashAndPassword_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GenerateAPIKey provides a mock function for the type MockSecurityUtil
 func (_mock *MockSecurityUtil) GenerateAPIKey(ctx context.Context) (string, string, error) {
 	ret := _mock.Called(ctx)

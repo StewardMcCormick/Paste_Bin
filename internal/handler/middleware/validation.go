@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
 	"io"
 	"net/http"
+
+	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
 )
 
 type JSONValidation struct {

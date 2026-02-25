@@ -4,13 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/StewardMcCormick/Paste_Bin/config"
 	"github.com/StewardMcCormick/Paste_Bin/internal/adapter/postgres"
 	"github.com/StewardMcCormick/Paste_Bin/internal/handler"
 	"github.com/StewardMcCormick/Paste_Bin/internal/handler/middleware"
 	userH "github.com/StewardMcCormick/Paste_Bin/internal/handler/user"
-	userRepo "github.com/StewardMcCormick/Paste_Bin/internal/repository/user"
-	userUseCase "github.com/StewardMcCormick/Paste_Bin/internal/usecase/user"
+	"github.com/StewardMcCormick/Paste_Bin/internal/repository"
+	userUseCase "github.com/StewardMcCormick/Paste_Bin/internal/usecase/auth"
 	"github.com/StewardMcCormick/Paste_Bin/internal/util/security"
 	"github.com/StewardMcCormick/Paste_Bin/internal/validation"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
@@ -18,10 +23,6 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/pkg/migrations"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-migrate/migrate/v4"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {
@@ -60,10 +61,10 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	}
 	logger.Info("[START] DataBase migrations executing completed")
 
-	userRepository := userRepo.NewRepository(pool)
+	uowFactory := repository.NewUWFactory(ctx, pool)
 	securityUtil := security.NewUtil()
 	valid := validation.NewUserValidator(validator.New(validator.WithRequiredStructEnabled()))
-	userUC := userUseCase.NewUseCase(userRepository, securityUtil, valid, cfg.Auth)
+	userUC := userUseCase.NewUseCase(uowFactory, securityUtil, valid, cfg.Auth)
 
 	logger.Info("[START] Server initialization...")
 

@@ -7,8 +7,14 @@ structname: '{{.Mock}}{{.InterfaceName}}'
 pkgname: mocks
 template: testify
 packages:
-  github.com/StewardMcCormick/Paste_Bin/internal/usecase/user:
+  github.com/StewardMcCormick/Paste_Bin/internal/usecase/auth:
     interfaces:
-      Repository:
       SecurityUtil:
       Validator:
+      UnitOfWorkFactory:
+  github.com/StewardMcCormick/Paste_Bin/internal/repository:
+    interfaces:
+      NoTxUnitOfWork:
+      TxUnitOfWork:
+      UserRepository:
+      APIKeyRepository:

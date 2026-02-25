@@ -19,3 +19,4 @@ postgres:
 
 auth:
   api_key_expires_time: "168h"
+  max_user_keys_num: 5

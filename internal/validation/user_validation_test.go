@@ -16,17 +16,17 @@ func TestUserValidator_Validate(t *testing.T) {
 
 	cases := []struct {
 		name     string
-		value    *dto.CreateUserRequest
+		value    *dto.UserRequest
 		expected *errs.ValidationError
 	}{
 		{
-			name:     "Correct user",
-			value:    &dto.CreateUserRequest{Username: "Correct_User", Password: "password"},
+			name:     "Correct auth",
+			value:    &dto.UserRequest{Username: "Correct_User", Password: "password"},
 			expected: nil,
 		},
 		{
 			"User with empty fields",
-			&dto.CreateUserRequest{Username: "", Password: ""},
+			&dto.UserRequest{Username: "", Password: ""},
 			&errs.ValidationError{
 				Message: errs.UserValidationError.Error(),
 				Status:  http.StatusBadRequest,
@@ -38,7 +38,7 @@ func TestUserValidator_Validate(t *testing.T) {
 		},
 		{
 			"User with too shorten fields",
-			&dto.CreateUserRequest{Username: "Us", Password: "pass"},
+			&dto.UserRequest{Username: "Us", Password: "pass"},
 			&errs.ValidationError{
 				Message: errs.UserValidationError.Error(),
 				Status:  http.StatusBadRequest,
@@ -50,7 +50,7 @@ func TestUserValidator_Validate(t *testing.T) {
 		},
 		{
 			"User with too longer fields",
-			&dto.CreateUserRequest{Username: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Password: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			&dto.UserRequest{Username: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Password: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
 			&errs.ValidationError{
 				Message: errs.UserValidationError.Error(),
 				Status:  http.StatusBadRequest,

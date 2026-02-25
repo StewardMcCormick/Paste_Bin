@@ -1,14 +1,14 @@
 package user
 
 import (
-	"github.com/StewardMcCormick/Paste_Bin/internal/usecase/user"
+	"github.com/StewardMcCormick/Paste_Bin/internal/usecase/auth"
 )
 
 type httpHandlers struct {
-	UserUseCase *user.UseCase
+	UserUseCase *auth.UseCase
 }
 
-func NewHandler(userUseCase *user.UseCase) *httpHandlers {
+func NewHandler(userUseCase *auth.UseCase) *httpHandlers {
 	return &httpHandlers{
 		UserUseCase: userUseCase,
 	}

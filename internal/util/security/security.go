@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+
 	cfgUtil "github.com/StewardMcCormick/Paste_Bin/config/cfg_util"
 	appctx "github.com/StewardMcCormick/Paste_Bin/internal/util/app_context"
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -55,4 +56,12 @@ func (s *Util) GenerateAPIKey(ctx context.Context) (keyPrefix string, key string
 	resultKey += randPart
 
 	return prefix, resultKey, nil
+}
+
+func (s *Util) CompareHashAndPassword(hash string, pass string) bool {
+	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(pass)); err != nil {
+		return false
+	}
+
+	return true
 }

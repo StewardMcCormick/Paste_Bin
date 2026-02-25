@@ -1,12 +1,15 @@
 package handler
 
 import (
+	"net/http"
+
 	mid "github.com/StewardMcCormick/Paste_Bin/internal/handler/middleware"
 	"github.com/go-chi/chi/v5"
-	"net/http"
 )
 
 type UserHandler interface {
+	NotFound(w http.ResponseWriter, r *http.Request)
+	MethodNotAllowed(w http.ResponseWriter, r *http.Request)
 	Registration(w http.ResponseWriter, r *http.Request)
 }
 
@@ -24,7 +27,10 @@ func NewRouter(
 	r.Use(envMid.Handler)
 	r.Use(validMid.Handler)
 
-	r.Post("/user", userHandler.Registration)
+	r.NotFound(userHandler.NotFound)
+	r.MethodNotAllowed(userHandler.MethodNotAllowed)
+
+	r.Post("/registration", userHandler.Registration)
 
 	return r
 }

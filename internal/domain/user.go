@@ -1,14 +1,23 @@
 package domain
 
 import (
-	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
 	"time"
+
+	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
 )
 
 type APIKey struct {
 	Key       string
 	Prefix    string
+	CreatedAt time.Time
 	ExpiresAt time.Time
+}
+
+func (k *APIKey) ToResponse() dto.APIKeyResponse {
+	return dto.APIKeyResponse{
+		Key:       k.Key,
+		ExpiresAt: k.ExpiresAt,
+	}
 }
 
 type User struct {
@@ -20,13 +29,12 @@ type User struct {
 }
 
 func (u *User) ToResponse() *dto.UserResponse {
-	return &dto.UserResponse{
-		Id:       u.Id,
-		Username: u.Username,
-		APIKey: dto.APIKeyResponse{
-			Key:       u.APIKey.Key,
-			ExpiresAt: u.APIKey.ExpiresAt,
-		},
+	user := &dto.UserResponse{
+		Id:        u.Id,
+		Username:  u.Username,
 		CreatedAt: u.CreatedAt,
+		APIKey:    u.APIKey.ToResponse(),
 	}
+
+	return user
 }

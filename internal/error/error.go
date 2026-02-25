@@ -5,11 +5,16 @@ import (
 )
 
 var (
-	InternalError = errors.New("internal error")
+	InternalError    = errors.New("internal error")
+	TooManyRequest   = errors.New("too many request")
+	Unforbidden      = errors.New("unforbidden")
+	PageNotFound     = errors.New("page not found")
+	MethodNotAllowed = errors.New("method not allowed")
 
 	// Domain error
 	UserAlreadyExists   = errors.New("user already exists")
 	UserValidationError = errors.New("validation error")
+	UserNotFound        = errors.New("user not found")
 )
 
 type BaseError struct {
