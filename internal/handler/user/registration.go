@@ -15,19 +15,17 @@ func (h *httpHandlers) Registration(w http.ResponseWriter, r *http.Request) {
 	var userRequest dto.UserRequest
 	json.NewDecoder(r.Body).Decode(&userRequest)
 
-	user, err := h.UserUseCase.Registration(r.Context(), &userRequest)
+	user, err := h.authUseCase.Registration(r.Context(), &userRequest)
 	if err != nil {
 		if errors.Is(err, errs.UserAlreadyExists) {
 			errs.SendAppError(r.Context(), w, http.StatusConflict, err)
-			return
-		} else if errors.Is(err, errs.InternalError) {
-			errs.SendAppError(r.Context(), w, http.StatusInternalServerError, err)
 			return
 		} else if errors.As(err, &validator.ValidationErrors{}) {
 			errs.SendAppError(r.Context(), w, http.StatusBadRequest, err.(validator.ValidationErrors))
 			return
 		}
-		errs.SendAppError(r.Context(), w, http.StatusBadRequest, err)
+
+		errs.SendAppError(r.Context(), w, http.StatusInternalServerError, err)
 		return
 	}
 

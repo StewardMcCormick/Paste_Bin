@@ -15,7 +15,6 @@ import (
 
 type Config struct {
 	APIKeyExpireDuration time.Duration `yaml:"api_key_expires_time" env-default:"168h"`
-	MaxUserKeysNum       int           `yaml:"max_user_keys_num" env-default:"5"`
 }
 
 type UnitOfWorkFactory interface {
@@ -32,6 +31,12 @@ type SecurityUtil interface {
 
 type Validator interface {
 	Validate(request *dto.UserRequest) error
+}
+
+type GeneratedAPIKey struct {
+	Prefix string
+	Key    string
+	Hash   string
 }
 
 type UseCase struct {
@@ -58,15 +63,15 @@ func (uc *UseCase) Registration(ctx context.Context, user *dto.UserRequest) (*dt
 
 	tx, err := uc.uow.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w - database error", err)
+		return nil, fmt.Errorf("%w - tx beggining error", err)
 	}
 	defer tx.Rollback(ctx)
 
-	exists, err := tx.UserRepository().Exists(ctx, user.Username)
+	userFromDb, err := tx.UserRepository().GetByUsername(ctx, user.Username)
 	if err != nil {
 		return nil, fmt.Errorf("%w - database error", errs.InternalError)
 	}
-	if exists {
+	if userFromDb != nil {
 		return nil, errs.UserAlreadyExists
 	}
 
@@ -75,12 +80,12 @@ func (uc *UseCase) Registration(ctx context.Context, user *dto.UserRequest) (*dt
 		log.Warn(fmt.Sprintf("%s - password hashing error", err.Error()))
 		return nil, fmt.Errorf("%w - password hashing error", errs.InternalError)
 	}
-	prefix, apiKey, err := uc.securityUtil.GenerateAPIKey(ctx)
+
+	key, err := uc.generateNewKey(ctx)
 	if err != nil {
-		log.Warn(fmt.Sprintf("%s - API key generation error", err.Error()))
+		log.Error(fmt.Sprintf("%s - API key generation error", err.Error()))
 		return nil, fmt.Errorf("%w - API key generation error", errs.InternalError)
 	}
-	hashedKey := uc.securityUtil.HashAPIKey(apiKey)
 
 	now := time.Now()
 	createdUser, err := tx.UserRepository().Create(
@@ -96,8 +101,8 @@ func (uc *UseCase) Registration(ctx context.Context, user *dto.UserRequest) (*dt
 
 	createdApiKey, err := tx.APIKeyRepository().Create(
 		ctx, createdUser.Id, &domain.APIKey{
-			Key:       hashedKey,
-			Prefix:    prefix,
+			Key:       key.Hash,
+			Prefix:    key.Prefix,
 			CreatedAt: now,
 			ExpiresAt: now.Add(uc.cfg.APIKeyExpireDuration),
 		},
@@ -108,10 +113,11 @@ func (uc *UseCase) Registration(ctx context.Context, user *dto.UserRequest) (*dt
 
 	err = tx.Commit(ctx)
 	if err != nil {
+		log.Error(err.Error())
 		return nil, fmt.Errorf("%w - tx commit error", errs.InternalError)
 	}
 
-	createdApiKey.Key = apiKey
+	createdApiKey.Key = key.Key
 	createdUser.APIKey = *createdApiKey
 
 	log.Info(
@@ -121,26 +127,66 @@ func (uc *UseCase) Registration(ctx context.Context, user *dto.UserRequest) (*dt
 	return createdUser.ToResponse(), nil
 }
 
-//func (uc *UseCase) Login(ctx context.Context, auth *dto.UserRequest) (*dto.UserResponse, error) {
-//	//exists, err := uc.repo.Exists(ctx, auth.Username)
-//	//if err != nil {
-//	//	return nil, fmt.Errorf("%w - database error", errs.InternalError)
-//	//}
-//	//if !exists {
-//	//	return nil, errs.UserNotFound
-//	//}
-//	//
-//	//userFromDb, err := uc.repo.GetUserWithAvailableKeyByUsername(ctx, auth.Username)
-//	//if userFromDb == nil {
-//	//	if err != nil {
-//	//		return nil, fmt.Errorf("%w - database error", errs.InternalError)
-//	//	}
-//	//	return nil, errs.UserNotFound
-//	//}
-//	//
-//	//if !uc.securityUtil.CompareHashAndPassword(userFromDb.Password, auth.Password) {
-//	//	return nil, errs.Unforbidden
-//	//}
-//	//
-//	//return userFromDb.ToResponse(), nil
-//}
+func (uc *UseCase) Login(ctx context.Context, user *dto.UserRequest) (*dto.APIKeyResponse, error) {
+	log := appctx.GetLogger(ctx)
+
+	tx, err := uc.uow.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w - tx beggining error", errs.InternalError)
+	}
+	defer tx.Rollback(ctx)
+
+	userFromDb, err := tx.UserRepository().GetByUsername(ctx, user.Username)
+	if err != nil {
+		return nil, fmt.Errorf("%w - database error", errs.InternalError)
+	}
+	if userFromDb == nil {
+		return nil, errs.UserNotFound
+	}
+	if !uc.securityUtil.CompareHashAndPassword(userFromDb.Password, user.Password) {
+		return nil, errs.Unauthorized
+	}
+
+	err = tx.APIKeyRepository().RevokeKeyByUserId(ctx, userFromDb.Id)
+	if err != nil {
+		return nil, fmt.Errorf("%w - API key revoke error", errs.InternalError)
+	}
+
+	newKey, err := uc.generateNewKey(ctx)
+	if err != nil {
+		log.Error(fmt.Sprintf("%s - API key generation error", err.Error()))
+		return nil, fmt.Errorf("%w - API key ganaration error", errs.InternalError)
+	}
+
+	newKeyFromDb, err := tx.APIKeyRepository().Create(
+		ctx, userFromDb.Id,
+		&domain.APIKey{
+			Key:       newKey.Hash,
+			Prefix:    newKey.Prefix,
+			CreatedAt: time.Now(),
+			ExpiresAt: time.Now().Add(uc.cfg.APIKeyExpireDuration),
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w - API key creating error", errs.InternalError)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, fmt.Errorf("%w - tx commit error", errs.InternalError)
+	}
+
+	newKeyFromDb.Key = newKey.Key
+	return newKeyFromDb.ToResponse(), nil
+}
+
+func (uc *UseCase) generateNewKey(ctx context.Context) (GeneratedAPIKey, error) {
+	prefix, apiKey, err := uc.securityUtil.GenerateAPIKey(ctx)
+	if err != nil {
+		return GeneratedAPIKey{}, err
+	}
+	hashedKey := uc.securityUtil.HashAPIKey(apiKey)
+
+	return GeneratedAPIKey{Prefix: prefix, Key: apiKey, Hash: hashedKey}, nil
+}

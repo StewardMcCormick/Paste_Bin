@@ -29,17 +29,45 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) (*domain
 }
 
 func (r *userRepository) Exists(ctx context.Context, username string) (bool, error) {
+	log := appctx.GetLogger(ctx)
+
 	query := `SELECT * FROM users WHERE username = $1`
-	row, err := r.pool.Query(ctx, query, username)
-	defer row.Close()
+	rows, err := r.pool.Query(ctx, query, username)
+	defer rows.Close()
 
 	if err != nil {
+		log.Error(err.Error())
 		return false, err
 	}
 
-	if row.Next() {
+	if rows.Next() {
 		return true, nil
 	}
 
 	return false, nil
+}
+
+func (r *userRepository) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
+	log := appctx.GetLogger(ctx)
+
+	query := `SELECT id, username, password_hash, created_at FROM users WHERE username = $1`
+	rows, err := r.pool.Query(ctx, query, username)
+	defer rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if rows.Next() {
+		resultUser := &domain.User{}
+
+		if err = rows.Scan(&resultUser.Id, &resultUser.Username, &resultUser.Password, &resultUser.CreatedAt); err != nil {
+			log.Error(err.Error())
+			return nil, err
+		}
+
+		return resultUser, nil
+	}
+
+	return nil, nil
 }

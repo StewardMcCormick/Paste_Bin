@@ -13,8 +13,8 @@ type APIKey struct {
 	ExpiresAt time.Time
 }
 
-func (k *APIKey) ToResponse() dto.APIKeyResponse {
-	return dto.APIKeyResponse{
+func (k *APIKey) ToResponse() *dto.APIKeyResponse {
+	return &dto.APIKeyResponse{
 		Key:       k.Key,
 		ExpiresAt: k.ExpiresAt,
 	}
@@ -33,7 +33,7 @@ func (u *User) ToResponse() *dto.UserResponse {
 		Id:        u.Id,
 		Username:  u.Username,
 		CreatedAt: u.CreatedAt,
-		APIKey:    u.APIKey.ToResponse(),
+		APIKey:    *u.APIKey.ToResponse(),
 	}
 
 	return user

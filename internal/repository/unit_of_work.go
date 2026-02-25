@@ -10,12 +10,12 @@ import (
 
 type UserRepository interface {
 	Create(ctx context.Context, user *domain.User) (*domain.User, error)
-	Exists(ctx context.Context, username string) (bool, error)
+	GetByUsername(ctx context.Context, username string) (*domain.User, error)
 }
 
 type APIKeyRepository interface {
 	Create(ctx context.Context, userId int64, key *domain.APIKey) (*domain.APIKey, error)
-	Exists(ctx context.Context, keyHash string) (bool, error)
+	RevokeKeyByUserId(ctx context.Context, userId int64) error
 }
 
 type TxUnitOfWork interface {

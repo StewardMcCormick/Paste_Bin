@@ -5,11 +5,11 @@ import (
 )
 
 type httpHandlers struct {
-	UserUseCase *auth.UseCase
+	authUseCase *auth.UseCase
 }
 
-func NewHandler(userUseCase *auth.UseCase) *httpHandlers {
+func NewHandler(authUseCase *auth.UseCase) *httpHandlers {
 	return &httpHandlers{
-		UserUseCase: userUseCase,
+		authUseCase: authUseCase,
 	}
 }

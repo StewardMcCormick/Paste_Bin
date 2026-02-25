@@ -11,6 +11,7 @@ type UserHandler interface {
 	NotFound(w http.ResponseWriter, r *http.Request)
 	MethodNotAllowed(w http.ResponseWriter, r *http.Request)
 	Registration(w http.ResponseWriter, r *http.Request)
+	Login(w http.ResponseWriter, r *http.Request)
 }
 
 func NewRouter(
@@ -31,6 +32,7 @@ func NewRouter(
 	r.MethodNotAllowed(userHandler.MethodNotAllowed)
 
 	r.Post("/registration", userHandler.Registration)
+	r.Post("/login", userHandler.Login)
 
 	return r
 }
