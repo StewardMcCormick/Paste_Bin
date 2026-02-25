@@ -12,6 +12,7 @@ type UserHandler interface {
 	MethodNotAllowed(w http.ResponseWriter, r *http.Request)
 	Registration(w http.ResponseWriter, r *http.Request)
 	Login(w http.ResponseWriter, r *http.Request)
+	Hello(w http.ResponseWriter, r *http.Request)
 }
 
 func NewRouter(
@@ -20,6 +21,7 @@ func NewRouter(
 	recovererMid mid.Recoverer,
 	envMid mid.Environmental,
 	validMid mid.JSONValidation,
+	authMid mid.Auth,
 ) http.Handler {
 	r := chi.NewRouter()
 
@@ -33,6 +35,11 @@ func NewRouter(
 
 	r.Post("/registration", userHandler.Registration)
 	r.Post("/login", userHandler.Login)
+
+	r.Group(func(r chi.Router) {
+		r.Use(authMid.Handler)
+		r.Get("/hello", userHandler.Hello)
+	})
 
 	return r
 }

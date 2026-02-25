@@ -3,6 +3,7 @@ package appctx
 import (
 	"context"
 	"errors"
+
 	cfgutil "github.com/StewardMcCormick/Paste_Bin/config/cfg_util"
 	"go.uber.org/zap"
 )
@@ -10,14 +11,17 @@ import (
 type loggerCtxKey string
 type requestIdCtxKey string
 type envKey string
+type userIdKey string
 
 var (
 	InvalidRequestIdError = errors.New("incorrect value for request id")
 	InvalidEnvError       = errors.New("incorrect value for env")
+	InvalidUserIdError    = errors.New("incorrect value for user id")
 
 	LoggerKey    loggerCtxKey    = "logger"
 	RequestIdKey requestIdCtxKey = "request_id"
 	EnvKey       envKey          = "env"
+	UserIdKey    userIdKey       = "user_id"
 )
 
 func WithRequestId(parent context.Context, requestId string) context.Context {
@@ -57,4 +61,17 @@ func GetEnv(ctx context.Context) (string, error) {
 	}
 
 	return env, nil
+}
+
+func WithUserId(parent context.Context, userId int64) context.Context {
+	return context.WithValue(parent, UserIdKey, userId)
+}
+
+func GetUserId(ctx context.Context) (int64, error) {
+	id, ok := ctx.Value(UserIdKey).(int64)
+	if !ok {
+		return 0, InvalidUserIdError
+	}
+
+	return id, nil
 }

@@ -16,6 +16,7 @@ type UserRepository interface {
 type APIKeyRepository interface {
 	Create(ctx context.Context, userId int64, key *domain.APIKey) (*domain.APIKey, error)
 	RevokeKeyByUserId(ctx context.Context, userId int64) error
+	GetByKeyHash(ctx context.Context, hash string) (userId int64, key *domain.APIKey, err error)
 }
 
 type TxUnitOfWork interface {

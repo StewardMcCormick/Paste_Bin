@@ -14,8 +14,8 @@ func NewUWFactory(ctx context.Context, pool *pgxpool.Pool) *pgxUnitOfWorkFactory
 	return &pgxUnitOfWorkFactory{pool: pool}
 }
 
-func (f *pgxUnitOfWorkFactory) Exec(ctx context.Context) (NoTxUnitOfWork, error) {
-	return &pgxUnitOfWorkNoTx{pool: f.pool}, nil
+func (f *pgxUnitOfWorkFactory) Exec(ctx context.Context) NoTxUnitOfWork {
+	return &pgxUnitOfWorkNoTx{pool: f.pool}
 }
 
 func (f *pgxUnitOfWorkFactory) Begin(ctx context.Context) (TxUnitOfWork, error) {

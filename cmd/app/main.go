@@ -62,7 +62,7 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	uowFactory := repository.NewUWFactory(ctx, pool)
 	securityUtil := security.NewUtil()
 	valid := validation.NewUserValidator(validator.New(validator.WithRequiredStructEnabled()))
-	userUC := userUseCase.NewUseCase(uowFactory, securityUtil, valid, cfg.Auth)
+	authUc := userUseCase.NewUseCase(uowFactory, securityUtil, valid, cfg.Auth)
 
 	logger.Info("[START] Server initialization...")
 
@@ -70,14 +70,16 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	recoverMid := middleware.NewRecoverer()
 	envMid := middleware.NewEnv(cfg.App.Env)
 	validMid := middleware.NewJSONValidation()
+	authMid := middleware.NewAuth(authUc)
 
-	userHandler := userH.NewHandler(userUC)
+	userHandler := userH.NewHandler(authUc)
 	router := handler.NewRouter(
 		userHandler,
 		logMid,
 		recoverMid,
 		envMid,
 		validMid,
+		authMid,
 	)
 	server := httpserver.New(router, &cfg.Server)
 

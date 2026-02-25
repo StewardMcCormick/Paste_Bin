@@ -101,7 +101,7 @@ func (_c *MockUnitOfWorkFactory_Begin_Call) RunAndReturn(run func(ctx context.Co
 }
 
 // Exec provides a mock function for the type MockUnitOfWorkFactory
-func (_mock *MockUnitOfWorkFactory) Exec(ctx context.Context) (repository.NoTxUnitOfWork, error) {
+func (_mock *MockUnitOfWorkFactory) Exec(ctx context.Context) repository.NoTxUnitOfWork {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -109,10 +109,6 @@ func (_mock *MockUnitOfWorkFactory) Exec(ctx context.Context) (repository.NoTxUn
 	}
 
 	var r0 repository.NoTxUnitOfWork
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (repository.NoTxUnitOfWork, error)); ok {
-		return returnFunc(ctx)
-	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context) repository.NoTxUnitOfWork); ok {
 		r0 = returnFunc(ctx)
 	} else {
@@ -120,12 +116,7 @@ func (_mock *MockUnitOfWorkFactory) Exec(ctx context.Context) (repository.NoTxUn
 			r0 = ret.Get(0).(repository.NoTxUnitOfWork)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // MockUnitOfWorkFactory_Exec_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Exec'
@@ -152,12 +143,12 @@ func (_c *MockUnitOfWorkFactory_Exec_Call) Run(run func(ctx context.Context)) *M
 	return _c
 }
 
-func (_c *MockUnitOfWorkFactory_Exec_Call) Return(noTxUnitOfWork repository.NoTxUnitOfWork, err error) *MockUnitOfWorkFactory_Exec_Call {
-	_c.Call.Return(noTxUnitOfWork, err)
+func (_c *MockUnitOfWorkFactory_Exec_Call) Return(noTxUnitOfWork repository.NoTxUnitOfWork) *MockUnitOfWorkFactory_Exec_Call {
+	_c.Call.Return(noTxUnitOfWork)
 	return _c
 }
 
-func (_c *MockUnitOfWorkFactory_Exec_Call) RunAndReturn(run func(ctx context.Context) (repository.NoTxUnitOfWork, error)) *MockUnitOfWorkFactory_Exec_Call {
+func (_c *MockUnitOfWorkFactory_Exec_Call) RunAndReturn(run func(ctx context.Context) repository.NoTxUnitOfWork) *MockUnitOfWorkFactory_Exec_Call {
 	_c.Call.Return(run)
 	return _c
 }

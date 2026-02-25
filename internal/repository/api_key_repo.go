@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/StewardMcCormick/Paste_Bin/internal/adapter/postgres"
 	"github.com/StewardMcCormick/Paste_Bin/internal/domain"
@@ -64,4 +65,30 @@ func (r *apiKeyRepository) RevokeKeyByUserId(ctx context.Context, userId int64) 
 	}
 
 	return nil
+}
+
+func (r *apiKeyRepository) GetByKeyHash(ctx context.Context, hash string) (userId int64, key *domain.APIKey, err error) {
+	log := appctx.GetLogger(ctx)
+	query := `SELECT key_hash, user_id, expire_at, key_prefix FROM api_key WHERE key_hash=$1`
+	rows, err := r.pool.Query(ctx, query, hash)
+	defer rows.Close()
+
+	if err != nil {
+		log.Error(err.Error())
+		return 0, nil, err
+	}
+
+	if !rows.Next() {
+		return 0, nil, nil
+	}
+
+	key = &domain.APIKey{}
+	err = rows.Scan(&key.Key, &userId, &key.ExpiresAt, &key.Prefix)
+	if err != nil {
+		log.Error(err.Error())
+		return 0, nil, err
+	}
+
+	log.Debug(fmt.Sprintf("Get key from db - %v", key))
+	return userId, key, nil
 }

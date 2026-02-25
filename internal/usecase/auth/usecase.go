@@ -18,7 +18,7 @@ type Config struct {
 }
 
 type UnitOfWorkFactory interface {
-	Exec(ctx context.Context) (repository.NoTxUnitOfWork, error)
+	Exec(ctx context.Context) repository.NoTxUnitOfWork
 	Begin(ctx context.Context) (repository.TxUnitOfWork, error)
 }
 
@@ -181,6 +181,12 @@ func (uc *UseCase) Login(ctx context.Context, user *dto.UserRequest) (*dto.APIKe
 	}
 
 	newKeyFromDb.Key = newKey.Key
+
+	log.Info(
+		"user login",
+		zap.String("username", user.Username),
+	)
+
 	return newKeyFromDb.ToResponse(), nil
 }
 
@@ -192,4 +198,26 @@ func (uc *UseCase) generateNewKey(ctx context.Context) (GeneratedAPIKey, error) 
 	hashedKey := uc.securityUtil.HashAPIKey(apiKey)
 
 	return GeneratedAPIKey{Prefix: prefix, Key: apiKey, Hash: hashedKey}, nil
+}
+
+func (uc *UseCase) Authenticate(ctx context.Context, apiKey string) (userId int64, err error) {
+	log := appctx.GetLogger(ctx)
+	hash := uc.securityUtil.HashAPIKey(apiKey)
+
+	userId, key, err := uc.uow.Exec(ctx).APIKeyRepository().GetByKeyHash(ctx, hash)
+	if err != nil {
+		return 0, fmt.Errorf("%w - find key error", errs.InternalError)
+	}
+	if key == nil || key.ExpiresAt.Compare(time.Now()) <= 0 {
+		log.Debug(fmt.Sprintf("%v", key))
+		log.Info(fmt.Sprintf("authentication failed"))
+		return 0, fmt.Errorf("%w - key invalid or expired - you should get a new key", errs.Unauthorized)
+	}
+
+	log.Info(
+		"new authenticate",
+		zap.Int64("user_id", userId),
+	)
+
+	return userId, nil
 }
