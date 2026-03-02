@@ -8,3 +8,7 @@ type PasteRequest struct {
 	Password string    `json:"password" validate:"password_required_if_protected"`
 	ExpireAt time.Time `json:"expire_at"`
 }
+
+type GetPasteRequest struct {
+	Password string `json:"password"`
+}

@@ -404,3 +404,210 @@ func (s *UseCaseTestSuite) TestCreate_Error() {
 		})
 	}
 }
+
+func (s *UseCaseTestSuite) TestGetByHash_Success() {
+	ctx := appctx.WithUserId(context.Background(), 1)
+
+	now := time.Now()
+	afterWeek := now.Add(24 * 7 * time.Hour)
+
+	cases := []struct {
+		name     string
+		setup    func()
+		value    string
+		expected *dto.PasteResponse
+	}{
+		{
+			"Get Public paste Paste",
+			func() {
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(
+						&domain.Paste{
+							Id:        1,
+							UserId:    1,
+							Privacy:   domain.PublicPolicy,
+							Hash:      "hash",
+							CreatedAt: now,
+							ExpireAt:  afterWeek,
+						}, nil,
+					).Once()
+			},
+			"hash",
+			&dto.PasteResponse{
+				Id:        1,
+				Privacy:   string(domain.PublicPolicy),
+				Hash:      "hash",
+				CreatedAt: now,
+				ExpireAt:  afterWeek,
+			},
+		},
+		{
+			"Get Private paste Paste",
+			func() {
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(
+						&domain.Paste{
+							Id:        1,
+							UserId:    1,
+							Privacy:   domain.PrivatePolicy,
+							Hash:      "hash",
+							Content:   "content",
+							CreatedAt: now,
+							ExpireAt:  afterWeek,
+						}, nil,
+					).Once()
+			},
+			"hash",
+			&dto.PasteResponse{
+				Id:        1,
+				Privacy:   string(domain.PrivatePolicy),
+				Hash:      "hash",
+				Content:   "content",
+				CreatedAt: now,
+				ExpireAt:  afterWeek,
+			},
+		},
+		{
+			"Get Protected paste Paste",
+			func() {
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(
+						&domain.Paste{
+							Id:        1,
+							UserId:    1,
+							Privacy:   domain.ProtectedPolicy,
+							Hash:      "hash",
+							Content:   "content",
+							CreatedAt: now,
+							ExpireAt:  afterWeek,
+						}, nil,
+					).Once()
+				s.security.EXPECT().
+					CompareHashAndPassword(mock.Anything, mock.Anything).
+					Return(true).
+					Once()
+			},
+			"hash",
+			&dto.PasteResponse{
+				Id:        1,
+				Privacy:   string(domain.ProtectedPolicy),
+				Hash:      "hash",
+				Content:   "content",
+				CreatedAt: now,
+				ExpireAt:  afterWeek,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			s.SetupTest()
+			tc.setup()
+
+			res, err := s.useCase.GetByHash(ctx, dto.GetPasteRequest{Password: "pass"}, tc.value)
+
+			s.NoError(err)
+			s.NotNil(res)
+
+			s.Equal(tc.expected.Id, res.Id)
+			s.Equal(tc.expected.Privacy, res.Privacy)
+			s.Equal(tc.expected.Hash, res.Hash)
+			s.Equal(tc.expected.Content, res.Content)
+			s.Equal(tc.expected.CreatedAt, res.CreatedAt)
+			s.Equal(tc.expected.ExpireAt, res.ExpireAt)
+		})
+	}
+}
+
+func (s *UseCaseTestSuite) TestGetByHash_Error() {
+	var ctx context.Context
+
+	cases := []struct {
+		name     string
+		value    string
+		setup    func()
+		expected error
+	}{
+		{
+			"Repo error - Paste not found",
+			"hash",
+			func() {
+				ctx = appctx.WithUserId(context.Background(), 1)
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(nil, errs.PasteNotFound).
+					Once()
+			},
+			errs.PasteNotFound,
+		},
+		{
+			"Repo error - internal error",
+			"hash",
+			func() {
+				ctx = appctx.WithUserId(context.Background(), 1)
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(nil, errors.New("db error")).
+					Once()
+			},
+			errs.InternalError,
+		},
+		{
+			"Incorrect User_Id in ctx",
+			"hash",
+			func() {
+				ctx = context.WithValue(context.Background(), appctx.UserIdKey, "invalid user_id")
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(&domain.Paste{}, nil).
+					Once()
+			},
+			errs.InternalError,
+		},
+		{
+			"Forbidden error - get Private paste with another user_id",
+			"hash",
+			func() {
+				ctx = appctx.WithUserId(context.Background(), 1)
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(&domain.Paste{UserId: 0, Privacy: domain.PrivatePolicy}, nil).
+					Once()
+
+			},
+			errs.Forbidden,
+		},
+		{
+			"Unauthorized error - wrong password",
+			"hash",
+			func() {
+				ctx = appctx.WithUserId(context.Background(), 1)
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(&domain.Paste{Privacy: domain.ProtectedPolicy}, nil).
+					Once()
+				s.security.EXPECT().
+					CompareHashAndPassword(mock.Anything, mock.Anything).
+					Return(false).
+					Once()
+			},
+			errs.Unauthorized,
+		},
+	}
+
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			s.SetupTest()
+			tc.setup()
+
+			res, err := s.useCase.GetByHash(ctx, dto.GetPasteRequest{Password: "pass"}, tc.value)
+
+			s.Nil(res)
+			s.Error(err)
+			s.ErrorIs(err, tc.expected)
+		})
+	}
+}

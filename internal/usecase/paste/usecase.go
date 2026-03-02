@@ -97,7 +97,7 @@ func (uc *UseCase) Create(ctx context.Context, request *dto.PasteRequest) (*dto.
 	return paste.ToResponse(), nil
 }
 
-func (uc *UseCase) GetByHash(ctx context.Context, hash string) (*dto.PasteResponse, error) {
+func (uc *UseCase) GetByHash(ctx context.Context, request dto.GetPasteRequest, hash string) (*dto.PasteResponse, error) {
 	log := appctx.GetLogger(ctx)
 
 	paste, err := uc.repo.GetByHash(ctx, hash)
@@ -116,8 +116,12 @@ func (uc *UseCase) GetByHash(ctx context.Context, hash string) (*dto.PasteRespon
 	}
 
 	if paste.Privacy == domain.PrivatePolicy && userId != paste.UserId {
-		log.Debug(fmt.Sprintf("get paste Forbidden: from - %d, to paste with user_id - %d", userId, paste.UserId))
+		log.Debug(fmt.Sprintf("get paste Forbidden(Private): from - %d, to paste with user_id - %d", userId, paste.UserId))
 		return nil, errs.Forbidden
+	} else if paste.Privacy == domain.ProtectedPolicy &&
+		!uc.security.CompareHashAndPassword(paste.PasswordHash, request.Password) {
+		log.Debug(fmt.Sprintf("get paste Forbidden(Protected): from - %d, to paste with user_id - %d", userId, paste.UserId))
+		return nil, errs.Unauthorized
 	}
 
 	return paste.ToResponse(), nil

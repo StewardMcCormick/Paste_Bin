@@ -63,7 +63,7 @@ func (r *repository) Create(ctx context.Context, paste *domain.Paste) (*domain.P
 func (r *repository) GetByHash(ctx context.Context, hash string) (*domain.Paste, error) {
 	log := appctx.GetLogger(ctx)
 
-	query := `SELECT pi.id, pi.user_id, pi.views, pi.privacy, pi.created_at, pi.expire_at, pc.content
+	query := `SELECT pi.id, pi.user_id, pi.views, pi.privacy, pi.password_hash, pi.created_at, pi.expire_at, pc.content
     			FROM paste_info pi JOIN paste_content pc ON pi.id = pc.paste_id 
 				WHERE paste_hash=$1`
 
@@ -74,6 +74,7 @@ func (r *repository) GetByHash(ctx context.Context, hash string) (*domain.Paste,
 			&result.UserId,
 			&result.Views,
 			&result.Privacy,
+			&result.PasswordHash,
 			&result.CreatedAt,
 			&result.ExpireAt,
 			&result.Content,
