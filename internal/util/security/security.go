@@ -35,7 +35,11 @@ func (s *Util) HashAPIKey(key string) string {
 
 func (s *Util) GenerateAPIKey(ctx context.Context) (keyPrefix string, key string, err error) {
 	var prefix string
-	switch ctx.Value(appctx.EnvKey) {
+	env, err := appctx.GetEnv(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	switch env {
 	case cfgUtil.DevelopmentEnv:
 		prefix = "pb_test"
 	default:

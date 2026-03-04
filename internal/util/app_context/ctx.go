@@ -24,19 +24,6 @@ var (
 	UserIdKey    userIdKey       = "user_id"
 )
 
-func WithRequestId(parent context.Context, requestId string) context.Context {
-	return context.WithValue(parent, RequestIdKey, requestId)
-}
-
-func GetRequestId(ctx context.Context) (string, error) {
-	id, ok := ctx.Value(RequestIdKey).(string)
-	if !ok {
-		return "", InvalidRequestIdError
-	}
-
-	return id, nil
-}
-
 func WithLogger(parent context.Context, logger *zap.Logger) context.Context {
 	return context.WithValue(parent, LoggerKey, logger)
 }
@@ -54,8 +41,8 @@ func WithEnv(parent context.Context, env cfgutil.Env) context.Context {
 	return context.WithValue(parent, EnvKey, env)
 }
 
-func GetEnv(ctx context.Context) (string, error) {
-	env, ok := ctx.Value(LoggerKey).(string)
+func GetEnv(ctx context.Context) (cfgutil.Env, error) {
+	env, ok := ctx.Value(LoggerKey).(cfgutil.Env)
 	if !ok {
 		return "", InvalidEnvError
 	}

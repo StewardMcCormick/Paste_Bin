@@ -39,7 +39,6 @@ func (m *Logging) Handler(next http.Handler) http.Handler {
 		reqLogger.Info("[NEW REQUEST]")
 
 		ctx := appctx.WithLogger(r.Context(), reqLogger)
-		ctx = appctx.WithRequestId(ctx, requestId)
 
 		next.ServeHTTP(wrapped, r.WithContext(ctx))
 
