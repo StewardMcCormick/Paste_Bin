@@ -7,7 +7,7 @@ import (
 
 	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
 	appctx "github.com/StewardMcCormick/Paste_Bin/internal/util/app_context"
-	"github.com/StewardMcCormick/Paste_Bin/internal/validation"
+	"github.com/StewardMcCormick/Paste_Bin/internal/util/validation"
 )
 
 const (

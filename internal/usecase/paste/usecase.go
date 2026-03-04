@@ -10,6 +10,7 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
 	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
 	appctx "github.com/StewardMcCormick/Paste_Bin/internal/util/app_context"
+	views "github.com/StewardMcCormick/Paste_Bin/internal/util/views_worker"
 )
 
 type Config struct {
@@ -31,19 +32,25 @@ type Security interface {
 	GeneratePasteHash() (string, error)
 }
 
-type UseCase struct {
-	cfg      Config
-	repo     Repository
-	valid    Validator
-	security Security
+type ViewWorker interface {
+	SendEvent(ctx context.Context, event views.ViewEvent)
 }
 
-func NewUseCase(cfg Config, repo Repository, valid Validator, security Security) *UseCase {
+type UseCase struct {
+	cfg        Config
+	repo       Repository
+	valid      Validator
+	security   Security
+	viewWorker ViewWorker
+}
+
+func NewUseCase(cfg Config, repo Repository, valid Validator, security Security, viewWorker ViewWorker) *UseCase {
 	return &UseCase{
-		cfg:      cfg,
-		repo:     repo,
-		valid:    valid,
-		security: security,
+		cfg:        cfg,
+		repo:       repo,
+		valid:      valid,
+		security:   security,
+		viewWorker: viewWorker,
 	}
 }
 
@@ -123,6 +130,8 @@ func (uc *UseCase) GetByHash(ctx context.Context, request dto.GetPasteRequest, h
 		log.Debug(fmt.Sprintf("get paste Forbidden(Protected): from - %d, to paste with user_id - %d", userId, paste.UserId))
 		return nil, errs.Unauthorized
 	}
+
+	uc.viewWorker.SendEvent(ctx, views.ViewEvent{PasteId: paste.Id})
 
 	return paste.ToResponse(), nil
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/StewardMcCormick/Paste_Bin/config"
 	"github.com/StewardMcCormick/Paste_Bin/internal/adapter/postgres"
@@ -21,7 +22,8 @@ import (
 	userUseCase "github.com/StewardMcCormick/Paste_Bin/internal/usecase/auth"
 	pasteUseCase "github.com/StewardMcCormick/Paste_Bin/internal/usecase/paste"
 	"github.com/StewardMcCormick/Paste_Bin/internal/util/security"
-	"github.com/StewardMcCormick/Paste_Bin/internal/validation"
+	"github.com/StewardMcCormick/Paste_Bin/internal/util/validation"
+	views "github.com/StewardMcCormick/Paste_Bin/internal/util/views_worker"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/httpserver"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/logging"
 	"github.com/StewardMcCormick/Paste_Bin/pkg/migrations"
@@ -35,7 +37,10 @@ func main() {
 		panic(err)
 	}
 
-	AppRun(context.Background(), cfg)
+	ctx, cancel := context.WithCancel(context.Background())
+	AppRun(ctx, cfg)
+
+	cancel()
 }
 
 func AppRun(ctx context.Context, cfg *config.Config) {
@@ -70,8 +75,12 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	userValid := validation.NewValidator[*dto.UserRequest](validator.New(validator.WithRequiredStructEnabled()))
 	pasteValid := validation.NewValidator[*dto.PasteRequest](validator.New(validator.WithRequiredStructEnabled()))
 
+	viewWorker := views.NewViewsWorker(pool, 10, 10*time.Millisecond)
+	viewWorker.Start(ctx)
+	logger.Info("[START] View Worker started")
+
 	authUc := userUseCase.NewUseCase(uowFactory, securityUtil, userValid, cfg.Auth)
-	pasteUc := pasteUseCase.NewUseCase(cfg.Paste, pasteRepo, pasteValid, securityUtil)
+	pasteUc := pasteUseCase.NewUseCase(cfg.Paste, pasteRepo, pasteValid, securityUtil, viewWorker)
 
 	logger.Info("[START] Server initialization...")
 
@@ -107,6 +116,9 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 
 	<-sig
 	logger.Info("[SHUTDOWN] Start shutting down...")
+
+	viewWorker.Close(ctx)
+	logger.Info("[SHUTDOWN] View Worker closed")
 
 	pool.Close()
 	logger.Info("[SHUTDOWN] PGX close completed")
