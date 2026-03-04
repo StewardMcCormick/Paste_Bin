@@ -24,3 +24,10 @@ packages:
       Repository:
       Validator:
       Security:
+  github.com/StewardMcCormick/Paste_Bin/internal/handler/paste:
+    interfaces:
+      UseCase:
+
+  github.com/StewardMcCormick/Paste_Bin/internal/handler/user:
+    interfaces:
+      UseCase:

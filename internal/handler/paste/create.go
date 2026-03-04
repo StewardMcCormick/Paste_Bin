@@ -27,7 +27,7 @@ func (h *httpHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pasteUrl := h.cfg.BaseUrl + "/paste/" + resp.Hash
+	pasteUrl := "/api/v1/paste/" + resp.Hash
 
 	w.Header().Add("Location", pasteUrl)
 	w.WriteHeader(http.StatusCreated)

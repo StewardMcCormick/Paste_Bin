@@ -8,14 +8,9 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type Config struct {
-	BaseUrl string `yaml:"base_url"`
-}
-
 type UserHandler interface {
 	Registration(w http.ResponseWriter, r *http.Request)
 	Login(w http.ResponseWriter, r *http.Request)
-	Hello(w http.ResponseWriter, r *http.Request)
 }
 
 type PasteHandler interface {
@@ -24,7 +19,6 @@ type PasteHandler interface {
 }
 
 func NewRouter(
-	cfg Config,
 	userHandler UserHandler,
 	pasteHandler PasteHandler,
 	logMid mid.Logging,
@@ -46,19 +40,25 @@ func NewRouter(
 	r.Use(logMid.Handler)
 	r.Use(recovererMid.Handler)
 	r.Use(envMid.Handler)
-	r.Use(validMid.Handler)
-
-	r.Post("/registration", userHandler.Registration)
-	r.Post("/login", userHandler.Login)
 
 	r.Group(func(r chi.Router) {
+		r.Use(validMid.Handler)
+
+		r.Post("/registration", userHandler.Registration)
+		r.Post("/login", userHandler.Login)
+	})
+
+	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(authMid.Handler)
 
-		r.Get("/hello", userHandler.Hello)
+		r.Route("/paste", func(r chi.Router) {
 
-		r.Route(cfg.BaseUrl+"/paste", func(r chi.Router) {
-			r.Post("/", pasteHandler.Create)
-			r.Get("/{pasteHash}", pasteHandler.GetPaste)
+			r.Group(func(r chi.Router) {
+				r.Use(validMid.Handler)
+				r.Post("/", pasteHandler.Create)
+				r.Get("/{pasteHash}", pasteHandler.GetPaste)
+			})
+
 		})
 	})
 

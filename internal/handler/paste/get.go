@@ -16,7 +16,7 @@ func (h *httpHandlers) GetPaste(w http.ResponseWriter, r *http.Request) {
 
 	req := dto.GetPasteRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		errs.SendAppError(r.Context(), w, http.StatusInternalServerError, err)
+		errs.SendAppError(r.Context(), w, http.StatusBadRequest, err)
 		return
 	}
 

@@ -82,9 +82,8 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	authMid := middleware.NewAuth(authUc)
 
 	userHandler := userH.NewHandler(authUc)
-	pasteHandler := pasteH.NewHandlers(cfg.API, pasteUc)
+	pasteHandler := pasteH.NewHandlers(pasteUc)
 	router := handler.NewRouter(
-		cfg.API,
 		userHandler,
 		pasteHandler,
 		logMid,

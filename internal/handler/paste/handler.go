@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
-	"github.com/StewardMcCormick/Paste_Bin/internal/handler"
 )
 
 type UseCase interface {
@@ -13,10 +12,9 @@ type UseCase interface {
 }
 
 type httpHandlers struct {
-	cfg     handler.Config
 	useCase UseCase
 }
 
-func NewHandlers(cfg handler.Config, useCase UseCase) *httpHandlers {
-	return &httpHandlers{cfg: cfg, useCase: useCase}
+func NewHandlers(useCase UseCase) *httpHandlers {
+	return &httpHandlers{useCase: useCase}
 }

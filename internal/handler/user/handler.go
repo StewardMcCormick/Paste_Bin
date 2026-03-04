@@ -6,16 +6,16 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
 )
 
-type AuthUseCase interface {
+type UseCase interface {
 	Registration(ctx context.Context, user *dto.UserRequest) (*dto.UserResponse, error)
 	Login(ctx context.Context, user *dto.UserRequest) (*dto.APIKeyResponse, error)
 }
 
 type httpHandlers struct {
-	authUseCase AuthUseCase
+	authUseCase UseCase
 }
 
-func NewHandler(authUseCase AuthUseCase) *httpHandlers {
+func NewHandler(authUseCase UseCase) *httpHandlers {
 	return &httpHandlers{
 		authUseCase: authUseCase,
 	}
