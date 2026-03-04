@@ -11,6 +11,7 @@ import (
 	errs "github.com/StewardMcCormick/Paste_Bin/internal/error"
 	"github.com/StewardMcCormick/Paste_Bin/internal/usecase/paste/mocks"
 	appctx "github.com/StewardMcCormick/Paste_Bin/internal/util/app_context"
+	views "github.com/StewardMcCormick/Paste_Bin/internal/util/views_worker"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -20,6 +21,7 @@ type UseCaseTestSuite struct {
 	repo     *mocks.MockRepository
 	valid    *mocks.MockValidator
 	security *mocks.MockSecurity
+	worker   *mocks.MockViewWorker
 	useCase  *UseCase
 }
 
@@ -31,9 +33,10 @@ func (s *UseCaseTestSuite) SetupTest() {
 	s.repo = mocks.NewMockRepository(s.T())
 	s.valid = mocks.NewMockValidator(s.T())
 	s.security = mocks.NewMockSecurity(s.T())
+	s.worker = mocks.NewMockViewWorker(s.T())
 
 	testCfg := Config{DefaultPasteExpiresTime: 7 * time.Hour}
-	s.useCase = NewUseCase(testCfg, s.repo, s.valid, s.security)
+	s.useCase = NewUseCase(testCfg, s.repo, s.valid, s.security, s.worker)
 }
 
 func (s *UseCaseTestSuite) TestCreate_Success_CorrectlyExpireTimeSetting() {
@@ -289,6 +292,7 @@ func (s *UseCaseTestSuite) TestCreate_Success_CorrectlyPasswordSetting() {
 
 	for _, tc := range cases {
 		s.Run(tc.name, func() {
+			s.SetupTest()
 			tc.setup()
 
 			result, err := s.useCase.Create(ctx, tc.value)
@@ -506,6 +510,11 @@ func (s *UseCaseTestSuite) TestGetByHash_Success() {
 		s.Run(tc.name, func() {
 			s.SetupTest()
 			tc.setup()
+
+			s.worker.EXPECT().
+				SendEvent(mock.Anything, mock.MatchedBy(func(event views.ViewEvent) bool {
+					return event.PasteId == tc.expected.Id
+				})).Once()
 
 			res, err := s.useCase.GetByHash(ctx, dto.GetPasteRequest{Password: "pass"}, tc.value)
 
