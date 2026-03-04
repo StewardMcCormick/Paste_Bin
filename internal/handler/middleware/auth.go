@@ -10,7 +10,7 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/internal/validation"
 )
 
-var (
+const (
 	APIKeyHeader = "X-API-Key"
 )
 
