@@ -42,7 +42,7 @@ func WithEnv(parent context.Context, env cfgutil.Env) context.Context {
 }
 
 func GetEnv(ctx context.Context) (cfgutil.Env, error) {
-	env, ok := ctx.Value(LoggerKey).(cfgutil.Env)
+	env, ok := ctx.Value(EnvKey).(cfgutil.Env)
 	if !ok {
 		return "", InvalidEnvError
 	}
