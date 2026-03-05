@@ -9,7 +9,6 @@ import (
 )
 
 type loggerCtxKey string
-type requestIdCtxKey string
 type envKey string
 type userIdKey string
 
