@@ -113,37 +113,31 @@ func (_c *MockAPIKeyRepository_Create_Call) RunAndReturn(run func(ctx context.Co
 }
 
 // GetByKeyHash provides a mock function for the type MockAPIKeyRepository
-func (_mock *MockAPIKeyRepository) GetByKeyHash(ctx context.Context, hash string) (int64, *domain.APIKey, error) {
+func (_mock *MockAPIKeyRepository) GetByKeyHash(ctx context.Context, hash string) (*domain.APIKey, error) {
 	ret := _mock.Called(ctx, hash)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByKeyHash")
 	}
 
-	var r0 int64
-	var r1 *domain.APIKey
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (int64, *domain.APIKey, error)); ok {
+	var r0 *domain.APIKey
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*domain.APIKey, error)); ok {
 		return returnFunc(ctx, hash)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) int64); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *domain.APIKey); ok {
 		r0 = returnFunc(ctx, hash)
 	} else {
-		r0 = ret.Get(0).(int64)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) *domain.APIKey); ok {
-		r1 = returnFunc(ctx, hash)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*domain.APIKey)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.APIKey)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, string) error); ok {
-		r2 = returnFunc(ctx, hash)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, hash)
 	} else {
-		r2 = ret.Error(2)
+		r1 = ret.Error(1)
 	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // MockAPIKeyRepository_GetByKeyHash_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByKeyHash'
@@ -176,12 +170,12 @@ func (_c *MockAPIKeyRepository_GetByKeyHash_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *MockAPIKeyRepository_GetByKeyHash_Call) Return(userId int64, key *domain.APIKey, err error) *MockAPIKeyRepository_GetByKeyHash_Call {
-	_c.Call.Return(userId, key, err)
+func (_c *MockAPIKeyRepository_GetByKeyHash_Call) Return(key *domain.APIKey, err error) *MockAPIKeyRepository_GetByKeyHash_Call {
+	_c.Call.Return(key, err)
 	return _c
 }
 
-func (_c *MockAPIKeyRepository_GetByKeyHash_Call) RunAndReturn(run func(ctx context.Context, hash string) (int64, *domain.APIKey, error)) *MockAPIKeyRepository_GetByKeyHash_Call {
+func (_c *MockAPIKeyRepository_GetByKeyHash_Call) RunAndReturn(run func(ctx context.Context, hash string) (*domain.APIKey, error)) *MockAPIKeyRepository_GetByKeyHash_Call {
 	_c.Call.Return(run)
 	return _c
 }

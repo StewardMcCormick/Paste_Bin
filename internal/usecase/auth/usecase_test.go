@@ -793,7 +793,7 @@ func (s *UseCaseTestSuite) Test_Authenticate_Success() {
 
 	s.apiKeyRepo.EXPECT().
 		GetByKeyHash(mock.Anything, mock.Anything).
-		Return(expectedId, &domain.APIKey{ExpiresAt: time.Now().Add(time.Hour)}, nil).
+		Return(&domain.APIKey{UserId: expectedId, ExpiresAt: time.Now().Add(time.Hour)}, nil).
 		Once()
 
 	userId, err := s.useCase.Authenticate(context.Background(), "key")
@@ -822,7 +822,7 @@ func (s *UseCaseTestSuite) Test_Authenticate_Error() {
 
 				s.apiKeyRepo.EXPECT().
 					GetByKeyHash(mock.Anything, mock.Anything).
-					Return(0, nil, errors.New("db error")).
+					Return(nil, errors.New("db error")).
 					Once()
 			},
 			errs.InternalError,
@@ -842,7 +842,7 @@ func (s *UseCaseTestSuite) Test_Authenticate_Error() {
 
 				s.apiKeyRepo.EXPECT().
 					GetByKeyHash(mock.Anything, mock.Anything).
-					Return(0, nil, nil).
+					Return(nil, nil).
 					Once()
 			},
 			errs.Unauthorized,
@@ -862,7 +862,7 @@ func (s *UseCaseTestSuite) Test_Authenticate_Error() {
 
 				s.apiKeyRepo.EXPECT().
 					GetByKeyHash(mock.Anything, mock.Anything).
-					Return(0, &domain.APIKey{ExpiresAt: time.Now().Add(-1 * time.Hour)}, nil).
+					Return(&domain.APIKey{ExpiresAt: time.Now().Add(-1 * time.Hour)}, nil).
 					Once()
 			},
 			errs.Unauthorized,
