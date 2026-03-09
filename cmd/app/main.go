@@ -12,7 +12,7 @@ import (
 
 	"github.com/StewardMcCormick/Paste_Bin/config"
 	"github.com/StewardMcCormick/Paste_Bin/internal/adapter/postgres"
-	"github.com/StewardMcCormick/Paste_Bin/internal/domain"
+	"github.com/StewardMcCormick/Paste_Bin/internal/adapter/redis"
 	"github.com/StewardMcCormick/Paste_Bin/internal/dto"
 	"github.com/StewardMcCormick/Paste_Bin/internal/handler"
 	"github.com/StewardMcCormick/Paste_Bin/internal/handler/middleware"
@@ -46,32 +46,39 @@ func main() {
 }
 
 func AppRun(ctx context.Context, cfg *config.Config) {
-	logger, err := logging.NewLogger(cfg.Logger, cfg.App.Env, cfg.App.Name, cfg.App.Version)
+	log, err := logging.NewLogger(cfg.Logger, cfg.App.Env, cfg.App.Name, cfg.App.Version)
 	if err != nil {
 		panic(err)
 	}
-	logger.Info("[START] Logger initialization completed")
+	log.Info("[START] Logger initialization completed")
 
-	logger.Info("[START] PGX pool initialization...")
+	log.Info("[START] PGX pool initialization...")
 	pool, err := postgres.NewPool(ctx, &cfg.Postgres)
 	if err != nil {
 		panic(err)
 	}
-	logger.Info("[START] PGX initialization completed")
+	log.Info("[START] PGX initialization completed")
 
-	logger.Info("[START] DataBase migrations executing...")
+	log.Info("[START] DataBase migrations executing...")
 	err = migrations.Exec(cfg.Postgres.DbUrl, cfg.Postgres.MigrationsPath)
 	if err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			logger.Info("[START] Migrations - nothing to change")
+			log.Info("[START] Migrations - nothing to change")
 		} else {
 			panic(err)
 		}
 	}
-	logger.Info("[START] DataBase migrations executing completed")
+	log.Info("[START] DataBase migrations executing completed")
 
-	pasteCache := appcache.NewInMemoryCache[string, *domain.PasteContent](ctx, 10)
-	apiKeyCache := appcache.NewInMemoryCache[string, *domain.APIKey](ctx, 10)
+	log.Info("[START] Redis client initialization...")
+	redisManager, err := redis.NewManager(cfg.Redis)
+	if err != nil {
+		panic(err)
+	}
+	log.Info("[START] Redis client initialization completed")
+
+	pasteCache := appcache.NewPasteCache(redisManager.GetPasteCacheClient())
+	apiKeyCache := appcache.NewAPIKeyCache(redisManager.GetAPIKeyCacheClient())
 
 	uowFactory := repository.NewUWFactory(pool, apiKeyCache)
 	pasteRepo := paste.NewRepository(pool, pasteCache)
@@ -82,14 +89,14 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 
 	viewWorker := views.NewViewsWorker(pool, 10, 10*time.Millisecond)
 	viewWorker.Start(ctx)
-	logger.Info("[START] View Worker started")
+	log.Info("[START] View Worker started")
 
 	authUc := userUseCase.NewUseCase(uowFactory, securityUtil, userValid, cfg.Auth)
 	pasteUc := pasteUseCase.NewUseCase(cfg.Paste, pasteRepo, pasteValid, securityUtil, viewWorker)
 
-	logger.Info("[START] Server initialization...")
+	log.Info("[START] Server initialization...")
 
-	logMid := middleware.NewLogging(logger)
+	logMid := middleware.NewLogging(log)
 	recoverMid := middleware.NewRecoverer()
 	envMid := middleware.NewEnv(cfg.App.Env)
 	validMid := middleware.NewJSONValidation()
@@ -109,7 +116,7 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	server := httpserver.New(router, &cfg.Server)
 
 	go func() {
-		logger.Info(fmt.Sprintf("[START] Server starts on %s:%s", cfg.Server.Host, cfg.Server.Port))
+		log.Info(fmt.Sprintf("[START] Server starts on %s:%s", cfg.Server.Host, cfg.Server.Port))
 		err = server.Run()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			panic(err)
@@ -120,29 +127,32 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
 
 	<-sig
-	logger.Info("[SHUTDOWN] Start shutting down...")
+	log.Info("[SHUTDOWN] Start shutting down...")
 
 	viewWorker.Close(ctx)
-	logger.Info("[SHUTDOWN] View Worker closed")
+	log.Info("[SHUTDOWN] View Worker closed")
 
-	pasteCache.Close(ctx)
-	apiKeyCache.Close(ctx)
-	logger.Info("[SHUTDOWN] Cache closed")
+	err = redisManager.Close()
+	if err != nil {
+		log.Error(fmt.Sprintf("[SHUTDOWN] Redis client close error - %v", err))
+	} else {
+		log.Info("[SHUTDOWN] Redis client closed")
+	}
 
 	pool.Close()
-	logger.Info("[SHUTDOWN] PGX close completed")
+	log.Info("[SHUTDOWN] PGX close completed")
 
 	err = server.Close()
 	if err != nil {
-		logger.Panic(fmt.Sprintf("[SHUTDOWN] Server closing error: %v", err))
+		log.Panic(fmt.Sprintf("[SHUTDOWN] Server closing error: %v", err))
 	}
-	logger.Info("[SHUTDOWN] Server close completed")
+	log.Info("[SHUTDOWN] Server close completed")
 
-	err = logger.Sync()
+	err = log.Sync()
 	if err != nil && !errors.Is(err, syscall.ENOTTY) && !errors.Is(err, syscall.EINVAL) && !errors.Is(err, syscall.EBADF) {
-		logger.Panic(fmt.Sprintf("[SHUTDOWN] Log sync error: %v", err))
+		log.Panic(fmt.Sprintf("[SHUTDOWN] Log sync error: %v", err))
 	}
-	logger.Info("[SHUTDOWN] Logger sync completed")
+	log.Info("[SHUTDOWN] Logger sync completed")
 
-	logger.Info("[SHUTDOWN] Shutdown completed")
+	log.Info("[SHUTDOWN] Shutdown completed")
 }

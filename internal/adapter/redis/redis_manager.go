@@ -20,7 +20,6 @@ type CacheConfig struct {
 	Port        int           `env:"REDIS_CACHE_PORT" required:"true"`
 	PoolSize    int           `yaml:"pool_size" env-default:"10"`
 	PoolTimeout time.Duration `yaml:"pool_timeout" env-default:"5s"`
-	User        string        `env:"REDIS_CACHE_USER" required:"true"`
 	Password    string        `env:"REDIS_CACHE_PASSWORD" required:"true"`
 	Db          int
 }
@@ -30,33 +29,27 @@ type RateConfig struct {
 	Port        int           `env:"REDIS_RATE_PORT" required:"true"`
 	PoolSize    int           `yaml:"pool_size" env-default:"10"`
 	PoolTimeout time.Duration `yaml:"pool_timeout" env-default:"5s"`
-	User        string        `env:"REDIS_RATE_USER" required:"true"`
 	Password    string        `env:"REDIS_RATE_PASSWORD" required:"true"`
 	Db          int
 }
 
 type Config struct {
-	Cache *CacheConfig
-	Rate  *RateConfig
-}
-
-type Client struct {
-	*redis.Client
-	name string
+	Cache CacheConfig `yaml:"cache"`
+	Rate  RateConfig  `yaml:"rate"`
 }
 
 type Manager struct {
-	clients map[string]*Client
+	clients map[string]*redis.Client
 	mu      *sync.Mutex
 }
 
 func NewManager(cfg Config) (*Manager, error) {
 	manager := &Manager{
-		clients: make(map[string]*Client, 2),
+		clients: make(map[string]*redis.Client, 2),
 		mu:      &sync.Mutex{},
 	}
 
-	if cfg.Cache != nil {
+	if &cfg.Cache != nil {
 		cfg.Cache.Db = 0
 		apiKeyCacheClient, err := newClient(apiKeyCacheName, cfg.Cache)
 		if err != nil {
@@ -69,33 +62,33 @@ func NewManager(cfg Config) (*Manager, error) {
 			return nil, err
 		}
 
-		manager.clients[apiKeyCacheClient.name] = apiKeyCacheClient
-		manager.clients[pasteCacheClient.name] = pasteCacheClient
+		manager.clients[apiKeyCacheName] = apiKeyCacheClient
+		manager.clients[pasteCacheName] = pasteCacheClient
 	}
 
-	if cfg.Rate != nil {
-		cfg.Rate.Db = 0
-		rateClient, err := newClient(rateCacheName, cfg.Rate)
-		if err != nil {
-			return nil, err
-		}
-
-		manager.clients[rateClient.name] = rateClient
-	}
-
+	//if cfg.Rate != nil {
+	//	cfg.Rate.Db = 0
+	//	rateClient, err := newClient(rateCacheName, cfg.Rate)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	manager.clients[rateCacheName] = rateClient
+	//}
+	//
 	return manager, nil
 }
 
-func newClient[T RedisConfig](name string, cfg T) (*Client, error) {
+func newClient[T RedisConfig](name string, cfg T) (*redis.Client, error) {
 
 	addr := fmt.Sprintf("%s:%d", cfg.GetHost(), cfg.GetPort())
 
 	client := redis.NewClient(&redis.Options{
 		Addr:        addr,
-		Username:    cfg.GetUser(),
 		Password:    cfg.GetPassword(),
 		PoolSize:    cfg.GetPoolSize(),
 		PoolTimeout: cfg.GetPoolTimeout(),
+		DB:          cfg.GetDb(),
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -104,17 +97,14 @@ func newClient[T RedisConfig](name string, cfg T) (*Client, error) {
 		return nil, fmt.Errorf("redis client init error: %s, error: %w", name, err)
 	}
 
-	return &Client{
-		client,
-		name,
-	}, nil
+	return client, nil
 }
 
-func (m *Manager) GetAPIKeyCacheClient() *Client {
+func (m *Manager) GetAPIKeyCacheClient() *redis.Client {
 	return m.clients[apiKeyCacheName]
 }
 
-func (m *Manager) GetPasteCacheClient() *Client {
+func (m *Manager) GetPasteCacheClient() *redis.Client {
 	return m.clients[pasteCacheName]
 }
 

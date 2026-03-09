@@ -102,6 +102,7 @@ func (uc *UseCase) Registration(ctx context.Context, user *dto.UserRequest) (*dt
 
 	createdApiKey, err := tx.APIKeyRepository().Create(
 		ctx, createdUser.Id, &domain.APIKey{
+			UserId:    createdUser.Id,
 			Key:       key.Hash,
 			Prefix:    key.Prefix,
 			CreatedAt: now,
@@ -218,7 +219,7 @@ func (uc *UseCase) Authenticate(ctx context.Context, apiKey string) (userId int6
 
 	log.Info(
 		"new authenticate",
-		zap.Int64("user_id", userId),
+		zap.Int64("user_id", key.UserId),
 	)
 
 	return key.UserId, nil
