@@ -3,8 +3,9 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ConnectionConfig struct {
@@ -52,7 +53,7 @@ func NewPool(ctx context.Context, cfg *Config) (*pgxpool.Pool, error) {
 
 	err = pool.Ping(ctx)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	return pool, nil
