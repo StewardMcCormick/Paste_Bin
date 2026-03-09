@@ -7,6 +7,7 @@ import (
 )
 
 type APIKey struct {
+	UserId    int64
 	Key       string
 	Prefix    string
 	CreatedAt time.Time

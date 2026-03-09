@@ -71,7 +71,7 @@ func AppRun(ctx context.Context, cfg *config.Config) {
 	logger.Info("[START] DataBase migrations executing completed")
 
 	pasteCache := appcache.NewInMemoryCache[string, *domain.PasteContent](ctx, 10)
-	apiKeyCache := appcache.NewInMemoryCache[int64, *domain.APIKey](ctx, 10)
+	apiKeyCache := appcache.NewInMemoryCache[string, *domain.APIKey](ctx, 10)
 
 	uowFactory := repository.NewUWFactory(pool, apiKeyCache)
 	pasteRepo := paste.NewRepository(pool, pasteCache)

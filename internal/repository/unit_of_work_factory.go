@@ -17,7 +17,7 @@ func NewUWFactory(pool *pgxpool.Pool, apiKeyCache api_key.Cache) *pgxUnitOfWorkF
 }
 
 func (f *pgxUnitOfWorkFactory) Exec(ctx context.Context) NoTxUnitOfWork {
-	return &pgxUnitOfWorkNoTx{pool: f.pool}
+	return &pgxUnitOfWorkNoTx{pool: f.pool, cache: f.keyCache}
 }
 
 func (f *pgxUnitOfWorkFactory) Begin(ctx context.Context) (TxUnitOfWork, error) {
@@ -26,5 +26,5 @@ func (f *pgxUnitOfWorkFactory) Begin(ctx context.Context) (TxUnitOfWork, error) 
 		return nil, err
 	}
 
-	return &pgxUnitOfWorkTX{tx: tx}, nil
+	return &pgxUnitOfWorkTX{tx: tx, cache: f.keyCache}, nil
 }

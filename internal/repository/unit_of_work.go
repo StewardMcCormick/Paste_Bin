@@ -18,7 +18,7 @@ type UserRepository interface {
 type APIKeyRepository interface {
 	Create(ctx context.Context, userId int64, key *domain.APIKey) (*domain.APIKey, error)
 	RevokeKeyByUserId(ctx context.Context, userId int64) error
-	GetByKeyHash(ctx context.Context, hash string) (userId int64, key *domain.APIKey, err error)
+	GetByKeyHash(ctx context.Context, hash string) (key *domain.APIKey, err error)
 }
 
 type TxUnitOfWork interface {
@@ -48,7 +48,8 @@ func (uw *pgxUnitOfWorkNoTx) APIKeyRepository() APIKeyRepository {
 }
 
 type pgxUnitOfWorkTX struct {
-	tx pgx.Tx
+	tx    pgx.Tx
+	cache api_key.Cache
 }
 
 func (uwt *pgxUnitOfWorkTX) Commit(ctx context.Context) error {
@@ -64,5 +65,5 @@ func (uwt *pgxUnitOfWorkTX) UserRepository() UserRepository {
 }
 
 func (uwt *pgxUnitOfWorkTX) APIKeyRepository() APIKeyRepository {
-	return &api_key.Repository{Pool: uwt.tx}
+	return &api_key.Repository{Pool: uwt.tx, Cache: uwt.cache}
 }

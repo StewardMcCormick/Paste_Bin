@@ -13,6 +13,7 @@ import (
 const (
 	expirationTime = time.Hour
 
+	// loadFactor is a map load percentage that achieved by eviction
 	loadFactor = 80
 )
 
@@ -133,6 +134,13 @@ func (c *inMemoryCache[K, T]) cleanup() {
 			delete(c.storage, k)
 		}
 	}
+}
+
+func (c *inMemoryCache[K, T]) DeleteByKey(ctx context.Context, key K) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	delete(c.storage, key)
 }
 
 func (c *inMemoryCache[K, T]) Close(ctx context.Context) {

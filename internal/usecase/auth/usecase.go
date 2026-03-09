@@ -206,7 +206,7 @@ func (uc *UseCase) Authenticate(ctx context.Context, apiKey string) (userId int6
 	log := appctx.GetLogger(ctx)
 	hash := uc.securityUtil.HashAPIKey(apiKey)
 
-	userId, key, err := uc.uow.Exec(ctx).APIKeyRepository().GetByKeyHash(ctx, hash)
+	key, err := uc.uow.Exec(ctx).APIKeyRepository().GetByKeyHash(ctx, hash)
 	if err != nil {
 		return 0, fmt.Errorf("%w - find key error", errs.InternalError)
 	}
@@ -221,5 +221,5 @@ func (uc *UseCase) Authenticate(ctx context.Context, apiKey string) (userId int6
 		zap.Int64("user_id", userId),
 	)
 
-	return userId, nil
+	return key.UserId, nil
 }
