@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/StewardMcCormick/Paste_Bin/config"
+	application "github.com/StewardMcCormick/Paste_Bin/internal/app"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	app, err := NewApp(ctx, cfg)
+	app, err := application.NewApp(cfg)
 	if err != nil {
 		panic(err)
 	}

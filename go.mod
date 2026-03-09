@@ -11,6 +11,7 @@ require (
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/matoous/go-nanoid/v2 v2.1.0
+	github.com/redis/go-redis/v9 v9.18.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
 	golang.org/x/crypto v0.48.0
@@ -30,7 +31,6 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/redis/go-redis/v9 v9.18.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	go.uber.org/atomic v1.11.0 // indirect

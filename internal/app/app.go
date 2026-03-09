@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -20,7 +20,7 @@ type App struct {
 	viewWorker *views.ViewWorker
 }
 
-func NewApp(ctx context.Context, cfg *config.Config) (*App, error) {
+func NewApp(cfg *config.Config) (*App, error) {
 	app := &App{cfg: cfg}
 
 	if err := app.InitLogger(cfg.Logger); err != nil {
