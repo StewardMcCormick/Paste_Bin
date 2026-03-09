@@ -22,13 +22,9 @@ postgres:
 
 redis:
   cache:
-    host: "localhost"
-    port: 6379
     pool_size: 10
     pool_timeout: "5s"
   rate:
-    host: "localhost"
-    port: 6380
     pool_size: 10
     pool_timeout: "5s"
 

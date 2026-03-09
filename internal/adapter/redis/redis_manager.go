@@ -15,19 +15,29 @@ const (
 	rateCacheName   = "RATE_LIMITING"
 )
 
-type InstanceConfig struct {
-	Host        string        `yaml:"host" required:"true"`
-	Port        int           `yaml:"port" required:"true"`
+type CacheConfig struct {
+	Host        string        `env:"REDIS_CACHE_HOST" required:"true"`
+	Port        int           `env:"REDIS_CACHE_PORT" required:"true"`
 	PoolSize    int           `yaml:"pool_size" env-default:"10"`
 	PoolTimeout time.Duration `yaml:"pool_timeout" env-default:"5s"`
-	User        string        `env:"REDIS_USER" required:"true"`
-	Password    string        `env:"REDIS_PASSWORD" required:"true"`
+	User        string        `env:"REDIS_CACHE_USER" required:"true"`
+	Password    string        `env:"REDIS_CACHE_PASSWORD" required:"true"`
+	Db          int
+}
+
+type RateConfig struct {
+	Host        string        `env:"REDIS_RATE_HOST" required:"true"`
+	Port        int           `env:"REDIS_RATE_PORT" required:"true"`
+	PoolSize    int           `yaml:"pool_size" env-default:"10"`
+	PoolTimeout time.Duration `yaml:"pool_timeout" env-default:"5s"`
+	User        string        `env:"REDIS_RATE_USER" required:"true"`
+	Password    string        `env:"REDIS_RATE_PASSWORD" required:"true"`
 	Db          int
 }
 
 type Config struct {
-	Cache *InstanceConfig
-	Rate  *InstanceConfig
+	Cache *CacheConfig
+	Rate  *RateConfig
 }
 
 type Client struct {
@@ -76,15 +86,16 @@ func NewManager(cfg Config) (*Manager, error) {
 	return manager, nil
 }
 
-func newClient(name string, cfg *InstanceConfig) (*Client, error) {
-	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+func newClient[T RedisConfig](name string, cfg T) (*Client, error) {
+
+	addr := fmt.Sprintf("%s:%d", cfg.GetHost(), cfg.GetPort())
 
 	client := redis.NewClient(&redis.Options{
 		Addr:        addr,
-		Username:    cfg.User,
-		Password:    cfg.Password,
-		PoolSize:    cfg.PoolSize,
-		PoolTimeout: cfg.PoolTimeout,
+		Username:    cfg.GetUser(),
+		Password:    cfg.GetPassword(),
+		PoolSize:    cfg.GetPoolSize(),
+		PoolTimeout: cfg.GetPoolTimeout(),
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -97,6 +108,14 @@ func newClient(name string, cfg *InstanceConfig) (*Client, error) {
 		client,
 		name,
 	}, nil
+}
+
+func (m *Manager) GetAPIKeyCacheClient() *Client {
+	return m.clients[apiKeyCacheName]
+}
+
+func (m *Manager) GetPasteCacheClient() *Client {
+	return m.clients[pasteCacheName]
 }
 
 func (m *Manager) Close() error {
