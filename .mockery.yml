@@ -32,3 +32,7 @@ packages:
   github.com/StewardMcCormick/Paste_Bin/internal/handler/user:
     interfaces:
       UseCase:
+
+  github.com/StewardMcCormick/Paste_Bin/internal/handler/middleware:
+    interfaces:
+      AuthService:
