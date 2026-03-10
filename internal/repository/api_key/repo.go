@@ -33,6 +33,7 @@ func (r *Repository) Create(ctx context.Context, userId int64, key *domain.APIKe
 		return nil, err
 	}
 
+	key.UserId = userId
 	r.Cache.Set(ctx, key.Key, key)
 	return key, nil
 }
