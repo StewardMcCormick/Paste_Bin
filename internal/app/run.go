@@ -11,6 +11,7 @@ import (
 
 func (a *App) Run(ctx context.Context) {
 	a.viewWorker.Start(ctx)
+	a.dbCleanUpWorker.Start(ctx)
 	a.log.Info("[START] View Worker started")
 
 	go func() {
@@ -25,8 +26,11 @@ func (a *App) Run(ctx context.Context) {
 func (a *App) Shutdown(ctx context.Context) {
 	a.log.Info("[SHUTDOWN] Start shutting down...")
 
-	a.viewWorker.Close(ctx)
+	a.viewWorker.Stop(ctx)
 	a.log.Info("[SHUTDOWN] View Worker closed")
+
+	a.dbCleanUpWorker.Stop(ctx)
+	a.log.Info("[SHUTDOWN] DB Clean-Up Worker closed")
 
 	err := a.redis.Close()
 	if err != nil {

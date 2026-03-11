@@ -155,7 +155,7 @@ func (w *ViewWorker) startBufferMonitor(ctx context.Context) {
 	}()
 }
 
-func (w *ViewWorker) Close(ctx context.Context) {
+func (w *ViewWorker) Stop(ctx context.Context) {
 	log := appctx.GetLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()

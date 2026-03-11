@@ -19,7 +19,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	app, err := application.NewApp(cfg)
+	app, err := application.NewApp(ctx, cfg)
 	if err != nil {
 		panic(err)
 	}

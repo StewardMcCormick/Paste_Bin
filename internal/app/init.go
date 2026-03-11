@@ -18,6 +18,7 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/internal/repository/paste"
 	userUseCase "github.com/StewardMcCormick/Paste_Bin/internal/usecase/auth"
 	pasteUseCase "github.com/StewardMcCormick/Paste_Bin/internal/usecase/paste"
+	cleanup "github.com/StewardMcCormick/Paste_Bin/internal/util/db_clean_up_worker"
 	"github.com/StewardMcCormick/Paste_Bin/internal/util/rate"
 	"github.com/StewardMcCormick/Paste_Bin/internal/util/security"
 	"github.com/StewardMcCormick/Paste_Bin/internal/util/validation"
@@ -84,6 +85,14 @@ func (a *App) InitViewsWorker(ctx context.Context) error {
 	a.log.Info("[START] View Worker started")
 
 	a.viewWorker = viewWorker
+	return nil
+}
+
+func (a *App) InitDbCleanUpWorker(ctx context.Context) error {
+	dbWorker := cleanup.NewWorker(a.pool, a.log, 30*time.Second)
+	a.log.Info("[START] DB Clean-Up Worker started")
+
+	a.dbCleanUpWorker = dbWorker
 	return nil
 }
 
