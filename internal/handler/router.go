@@ -53,12 +53,12 @@ func NewRouter(
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(authMid.Handler)
+		r.Use(validMid.Handler)
 		r.Use(userIdRateLimitMid.Handler)
 
 		r.Route("/paste", func(r chi.Router) {
 
 			r.Group(func(r chi.Router) {
-				r.Use(validMid.Handler)
 				r.Post("/", pasteHandler.Create)
 				r.Get("/{pasteHash}", pasteHandler.GetPaste)
 			})
