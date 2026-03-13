@@ -49,7 +49,6 @@ func (w *Worker) Start(ctx context.Context) {
 					w.log.Error(fmt.Sprintf("DB clean up error - %v", err))
 					continue
 				}
-				w.log.Debug("DB clean up")
 			case <-w.quite:
 				w.log.Debug("quite")
 				return

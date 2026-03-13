@@ -14,4 +14,9 @@ COPY --from=builder /bin/app /app-bin
 
 COPY config.yaml ./
 
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && \
+    chown -R appuser:appgroup .
+
+USER appuser
+
 ENTRYPOINT ["/app-bin"]
