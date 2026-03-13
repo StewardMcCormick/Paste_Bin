@@ -32,13 +32,16 @@ func (c *pasteCache) Set(ctx context.Context, key string, value *domain.PasteCon
 	go func() {
 		defer c.wg.Done()
 
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
 		jsonValue, err := json.Marshal(&pasteCacheValue{Content: value})
 		if err != nil {
 			log.Error(fmt.Sprintf("JSON parsing error - %v", err))
 		}
 
-		if c.client.Set(ctx, key, jsonValue, 0).Err() != nil {
-			log.Error(fmt.Sprintf("Redis saving error - %v", err))
+		if redisErr := c.client.Set(ctx, key, jsonValue, 0).Err(); redisErr != nil {
+			log.Error(fmt.Sprintf("Redis saving error - %v", redisErr))
 		}
 	}()
 }
