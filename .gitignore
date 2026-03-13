@@ -3,5 +3,6 @@
 
 .env
 .env.docker-compose
+.env.docker-single
 
 .DS_Store
