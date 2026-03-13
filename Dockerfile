@@ -19,4 +19,6 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup && \
 
 USER appuser
 
+EXPOSE 8080
+
 ENTRYPOINT ["/app-bin"]
