@@ -10,7 +10,7 @@ RUN go build -o /bin/app ./cmd/app/main.go
 FROM alpine
 WORKDIR /app
 
-COPY --from=builder /bin/app /app-bin
+COPY --from=builder /bin/app ./app-bin
 
 COPY config.yaml ./
 
@@ -21,4 +21,4 @@ USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app-bin"]
+ENTRYPOINT ["./app-bin"]
