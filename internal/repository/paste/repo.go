@@ -15,6 +15,7 @@ import (
 type Cache interface {
 	Set(ctx context.Context, hash string, content *domain.PasteContent)
 	Get(ctx context.Context, hash string) *domain.PasteContent
+	RevokeByKey(ctx context.Context, key string)
 }
 
 type repository struct {
@@ -158,4 +159,42 @@ func (r *repository) getFullPasteByHash(ctx context.Context, hash string) (*doma
 	}
 
 	return result, nil
+}
+
+func (r *repository) Update(ctx context.Context, paste *domain.Paste) (*domain.Paste, error) {
+	log := appctx.GetLogger(ctx)
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		log.Error(fmt.Sprintf("tx begin error - %v", err))
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	query := `UPDATE paste_info SET privacy=$1, password_hash=$2, expire_at=$3 WHERE paste_hash=$4 RETURNING id`
+
+	id := int64(0)
+	err = tx.QueryRow(ctx, query, paste.Privacy, paste.PasswordHash, paste.ExpireAt, paste.Hash).Scan(&id)
+	if err != nil {
+		log.Error(fmt.Sprintf("update paste-info error - %v", err))
+		return nil, err
+	}
+
+	query = `UPDATE paste_content SET content=$1 WHERE paste_id=$2`
+
+	_, err = tx.Exec(ctx, query, paste.Content, id)
+	if err != nil {
+		log.Error(fmt.Sprintf("update paste-content error - %v", err))
+		return nil, err
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		log.Error(fmt.Sprintf("commit tx error - %v", err))
+		return nil, err
+	}
+
+	r.cache.RevokeByKey(ctx, paste.Hash)
+
+	return paste, nil
 }

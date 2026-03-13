@@ -16,6 +16,7 @@ type UserHandler interface {
 type PasteHandler interface {
 	Create(w http.ResponseWriter, r *http.Request)
 	GetPaste(w http.ResponseWriter, r *http.Request)
+	UpdatePaste(w http.ResponseWriter, r *http.Request)
 }
 
 func NewRouter(
@@ -61,6 +62,7 @@ func NewRouter(
 			r.Group(func(r chi.Router) {
 				r.Post("/", pasteHandler.Create)
 				r.Get("/{pasteHash}", pasteHandler.GetPaste)
+				r.Patch("/{pasteHash}", pasteHandler.UpdatePaste)
 			})
 
 		})

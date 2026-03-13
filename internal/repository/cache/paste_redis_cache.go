@@ -32,7 +32,7 @@ func (c *pasteCache) Set(ctx context.Context, key string, value *domain.PasteCon
 	go func() {
 		defer c.wg.Done()
 
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		redisCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		jsonValue, err := json.Marshal(&pasteCacheValue{Content: value})
@@ -40,7 +40,7 @@ func (c *pasteCache) Set(ctx context.Context, key string, value *domain.PasteCon
 			log.Error(fmt.Sprintf("JSON parsing error - %v", err))
 		}
 
-		if redisErr := c.client.Set(ctx, key, jsonValue, 0).Err(); redisErr != nil {
+		if redisErr := c.client.Set(redisCtx, key, jsonValue, 0).Err(); redisErr != nil {
 			log.Error(fmt.Sprintf("Redis saving error - %v", redisErr))
 		}
 	}()
@@ -86,4 +86,21 @@ func (c *pasteCache) Close(ctx context.Context) {
 		log.Error(fmt.Sprintf("Cache closing error - %v", ctx.Err()))
 		return
 	}
+}
+func (c *pasteCache) RevokeByKey(ctx context.Context, key string) {
+	log := appctx.GetLogger(ctx)
+
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+
+		redisCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if num, redisErr := c.client.Del(redisCtx, key).Result(); redisErr != nil {
+			log.Error(fmt.Sprintf("redis delete error - %v", redisErr))
+		} else if num == 0 {
+			log.Debug("nothing to update")
+		}
+	}()
 }

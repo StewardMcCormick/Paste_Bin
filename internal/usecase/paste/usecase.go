@@ -16,6 +16,7 @@ type Config struct {
 type Repository interface {
 	Create(context.Context, *domain.Paste) (*domain.Paste, error)
 	GetByHash(ctx context.Context, hash string) (*domain.Paste, error)
+	Update(ctx context.Context, paste *domain.Paste) (*domain.Paste, error)
 }
 
 type Validator interface {

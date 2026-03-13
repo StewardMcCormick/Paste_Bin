@@ -1,6 +1,8 @@
 package dto
 
-import "time"
+import (
+	"time"
+)
 
 type PasteRequest struct {
 	Content  string    `json:"content" validate:"required,min=5"`
