@@ -1,11 +1,16 @@
 .idea
-.bin
+bin
 
 .env
 .env.example
+.env.docker-single
+.env.docker-single.example
 .env.docker-compose
+.env.docker-compose.example
 
 Makefile
 
 docker-compose.yaml
 Dockerfile
+
+.DS-Store

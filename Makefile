@@ -1,3 +1,15 @@
+.PHONY: gen-mocks
+gen-mocks:
+	@mockery
+
+.PHONY: test
+test: gen-mocks
+	@go test ./...
+
+.PHONY: test-with-cover
+test-with-cover: gen-mocks
+	@go test -cover ./...
+
 .PHONY: build-local
 build-local:
 	@go build -o ./bin/app ./cmd/app/main.go
