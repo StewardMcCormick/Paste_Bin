@@ -78,7 +78,7 @@ func (r *repository) GetByHash(ctx context.Context, hash string) (*domain.Paste,
 				return nil, errs.PasteNotFound
 			}
 			log.Error(fmt.Sprintf("%v - getting paste error", err))
-			return nil, err
+			return nil, errs.InternalError
 		}
 
 		paste.Content = *content
@@ -94,7 +94,7 @@ func (r *repository) GetByHash(ctx context.Context, hash string) (*domain.Paste,
 			return nil, errs.PasteNotFound
 		}
 		log.Error(fmt.Sprintf("%v - getting paste error", err))
-		return nil, err
+		return nil, errs.InternalError
 	}
 
 	log.Info(fmt.Sprintf("get paste - %s", hash))

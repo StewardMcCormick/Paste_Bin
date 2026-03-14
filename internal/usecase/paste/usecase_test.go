@@ -41,7 +41,7 @@ func (s *UseCaseTestSuite) SetupTest() {
 	s.useCase = NewUseCase(testCfg, s.repo, s.createRequestValid, s.updateRequestValid, s.security, s.worker)
 }
 
-func (s *UseCaseTestSuite) TestCreate_Success_CorrectlyExpireTimeSetting() {
+func (s *UseCaseTestSuite) Test_Create_Success_CorrectlyExpireTimeSetting() {
 	ctx := appctx.WithUserId(context.Background(), 1)
 	now := time.Now()
 
@@ -155,7 +155,7 @@ func (s *UseCaseTestSuite) TestCreate_Success_CorrectlyExpireTimeSetting() {
 	}
 }
 
-func (s *UseCaseTestSuite) TestCreate_Success_CorrectlyPasswordSetting() {
+func (s *UseCaseTestSuite) Test_Create_Success_CorrectlyPasswordSetting() {
 	ctx := appctx.WithUserId(context.Background(), 1)
 	now := time.Now()
 
@@ -311,7 +311,7 @@ func (s *UseCaseTestSuite) TestCreate_Success_CorrectlyPasswordSetting() {
 	}
 }
 
-func (s *UseCaseTestSuite) TestCreate_Error() {
+func (s *UseCaseTestSuite) Test_Create_Error() {
 	var ctx context.Context
 
 	cases := []struct {
@@ -411,7 +411,7 @@ func (s *UseCaseTestSuite) TestCreate_Error() {
 	}
 }
 
-func (s *UseCaseTestSuite) TestGetByHash_Success() {
+func (s *UseCaseTestSuite) Test_GetByHash_Success() {
 	ctx := appctx.WithUserId(context.Background(), 1)
 
 	now := time.Now()
@@ -533,7 +533,7 @@ func (s *UseCaseTestSuite) TestGetByHash_Success() {
 	}
 }
 
-func (s *UseCaseTestSuite) TestGetByHash_Error() {
+func (s *UseCaseTestSuite) Test_GetByHash_Error() {
 	var ctx context.Context
 
 	cases := []struct {
@@ -619,6 +619,389 @@ func (s *UseCaseTestSuite) TestGetByHash_Error() {
 			s.Nil(res)
 			s.Error(err)
 			s.ErrorIs(err, tc.expected)
+		})
+	}
+}
+
+func (s *UseCaseTestSuite) Test_UpdatePaste_Success() {
+	now := time.Now()
+	cases := []struct {
+		name     string
+		value    *dto.UpdatePasteRequest
+		expected *dto.PasteResponse
+		setup    func()
+	}{
+		{
+			"Update all fields with no-protected privacy",
+			&dto.UpdatePasteRequest{
+				Content:  "new content",
+				Privacy:  string(domain.PublicPolicy),
+				Password: "pass",
+				ExpireAt: now.Add(time.Hour),
+			},
+			&dto.PasteResponse{
+				Id:        10,
+				Views:     2,
+				Privacy:   string(domain.PublicPolicy),
+				CreatedAt: now,
+				ExpireAt:  now.Add(time.Hour),
+				Content:   "new content",
+			},
+			func() {
+				s.updateRequestValid.EXPECT().
+					Validate(&dto.UpdatePasteRequest{
+						Content:  "new content",
+						Privacy:  string(domain.PublicPolicy),
+						Password: "pass",
+						ExpireAt: now.Add(time.Hour),
+					}).
+					Return(nil).
+					Once()
+
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, "hash").
+					Return(&domain.Paste{
+						Id:        10,
+						Views:     2,
+						Privacy:   domain.PrivatePolicy,
+						Hash:      "hash",
+						CreatedAt: now,
+						ExpireAt:  now.Add(2 * time.Hour),
+						Content:   "content",
+					}, nil).
+					Once()
+
+				s.repo.EXPECT().
+					Update(mock.Anything, mock.MatchedBy(func(paste *domain.Paste) bool {
+						return paste.Content == "new content" &&
+							paste.Privacy == domain.PublicPolicy &&
+							paste.PasswordHash == "" && paste.ExpireAt.Equal(now.Add(time.Hour))
+					})).
+					Return(&domain.Paste{
+						Id:        10,
+						Views:     2,
+						Privacy:   domain.PublicPolicy,
+						Hash:      "hash",
+						CreatedAt: now,
+						ExpireAt:  now.Add(time.Hour),
+						Content:   "new content",
+					}, nil).Once()
+			},
+		},
+		{
+			"Update all fields with protected privacy",
+			&dto.UpdatePasteRequest{
+				Content:  "new content",
+				Privacy:  string(domain.ProtectedPolicy),
+				Password: "new pass",
+				ExpireAt: now.Add(time.Hour),
+			},
+			&dto.PasteResponse{
+				Id:        10,
+				Views:     2,
+				Privacy:   string(domain.ProtectedPolicy),
+				CreatedAt: now,
+				ExpireAt:  now.Add(time.Hour),
+				Content:   "new content",
+			},
+			func() {
+				s.updateRequestValid.EXPECT().
+					Validate(&dto.UpdatePasteRequest{
+						Content:  "new content",
+						Privacy:  string(domain.ProtectedPolicy),
+						Password: "new pass",
+						ExpireAt: now.Add(time.Hour),
+					}).
+					Return(nil).
+					Once()
+
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, "hash").
+					Return(&domain.Paste{
+						Id:           10,
+						Views:        2,
+						Privacy:      domain.PublicPolicy,
+						Hash:         "hash",
+						PasswordHash: "old hash",
+						CreatedAt:    now,
+						ExpireAt:     now.Add(2 * time.Hour),
+						Content:      "content",
+					}, nil).
+					Once()
+
+				s.security.EXPECT().
+					CompareHashAndPassword("old hash", "new pass").
+					Return(false).
+					Once()
+
+				s.security.EXPECT().
+					HashPassword("new pass").
+					Return("new hash", nil).
+					Once()
+
+				s.repo.EXPECT().
+					Update(mock.Anything, mock.MatchedBy(func(paste *domain.Paste) bool {
+						return paste.Content == "new content" &&
+							paste.Privacy == domain.ProtectedPolicy &&
+							paste.PasswordHash == "new hash" && paste.ExpireAt.Equal(now.Add(time.Hour))
+					})).
+					Return(&domain.Paste{
+						Id:        10,
+						Views:     2,
+						Privacy:   domain.ProtectedPolicy,
+						Hash:      "hash",
+						CreatedAt: now,
+						ExpireAt:  now.Add(time.Hour),
+						Content:   "new content",
+					}, nil).Once()
+			},
+		},
+		{
+			"No updated fields with no-protected privacy",
+			&dto.UpdatePasteRequest{
+				Content:  "content",
+				Privacy:  string(domain.PublicPolicy),
+				Password: "pass",
+				ExpireAt: now.Add(2 * time.Hour),
+			},
+			&dto.PasteResponse{
+				Id:        10,
+				Views:     2,
+				Privacy:   string(domain.PublicPolicy),
+				CreatedAt: now,
+				ExpireAt:  now.Add(2 * time.Hour),
+				Content:   "content",
+			},
+			func() {
+				s.updateRequestValid.EXPECT().
+					Validate(&dto.UpdatePasteRequest{
+						Content:  "content",
+						Privacy:  string(domain.PublicPolicy),
+						Password: "pass",
+						ExpireAt: now.Add(2 * time.Hour),
+					}).
+					Return(nil).
+					Once()
+
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, "hash").
+					Return(&domain.Paste{
+						Id:        10,
+						Views:     2,
+						Privacy:   domain.PrivatePolicy,
+						Hash:      "hash",
+						CreatedAt: now,
+						ExpireAt:  now.Add(2 * time.Hour),
+						Content:   "content",
+					}, nil).
+					Once()
+
+				s.repo.EXPECT().
+					Update(mock.Anything, mock.MatchedBy(func(paste *domain.Paste) bool {
+						return paste.Content == "content" &&
+							paste.Privacy == domain.PublicPolicy &&
+							paste.PasswordHash == "" && paste.ExpireAt.Equal(now.Add(2*time.Hour))
+					})).
+					Return(&domain.Paste{
+						Id:        10,
+						Views:     2,
+						Privacy:   domain.PublicPolicy,
+						Hash:      "hash",
+						CreatedAt: now,
+						ExpireAt:  now.Add(2 * time.Hour),
+						Content:   "content",
+					}, nil).Once()
+			},
+		},
+		{
+			"No updated fields with protected privacy",
+			&dto.UpdatePasteRequest{
+				Content:  "content",
+				Privacy:  string(domain.ProtectedPolicy),
+				ExpireAt: now.Add(time.Hour),
+			},
+			&dto.PasteResponse{
+				Id:        10,
+				Views:     2,
+				Privacy:   string(domain.ProtectedPolicy),
+				CreatedAt: now,
+				ExpireAt:  now.Add(time.Hour),
+				Content:   "content",
+			},
+			func() {
+				s.updateRequestValid.EXPECT().
+					Validate(&dto.UpdatePasteRequest{
+						Content:  "content",
+						Privacy:  string(domain.ProtectedPolicy),
+						ExpireAt: now.Add(time.Hour),
+					}).
+					Return(nil).
+					Once()
+
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, "hash").
+					Return(&domain.Paste{
+						Id:           10,
+						Views:        2,
+						Privacy:      domain.PublicPolicy,
+						Hash:         "hash",
+						PasswordHash: "hash",
+						CreatedAt:    now,
+						ExpireAt:     now.Add(time.Hour),
+						Content:      "content",
+					}, nil).
+					Once()
+
+				s.repo.EXPECT().
+					Update(mock.Anything, mock.MatchedBy(func(paste *domain.Paste) bool {
+						return paste.Content == "content" &&
+							paste.Privacy == domain.ProtectedPolicy &&
+							paste.PasswordHash == "hash" && paste.ExpireAt.Equal(now.Add(time.Hour))
+					})).
+					Return(&domain.Paste{
+						Id:        10,
+						Views:     2,
+						Privacy:   domain.ProtectedPolicy,
+						Hash:      "hash",
+						CreatedAt: now,
+						ExpireAt:  now.Add(time.Hour),
+						Content:   "content",
+					}, nil).Once()
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			s.SetupTest()
+			tc.setup()
+
+			res, err := s.useCase.UpdatePaste(context.Background(), "hash", tc.value)
+
+			s.Require().NoError(err)
+
+			s.Equal(tc.expected.Id, res.Id)
+			s.Equal(tc.expected.Views, res.Views)
+			s.Equal(tc.expected.Privacy, res.Privacy)
+			s.True(tc.expected.CreatedAt.Equal(res.CreatedAt))
+			s.True(tc.expected.ExpireAt.Equal(res.ExpireAt))
+			s.Equal(tc.expected.Content, res.Content)
+		})
+	}
+}
+
+func (s *UseCaseTestSuite) Test_UpdatePaste_Error() {
+	cases := []struct {
+		name          string
+		value         *dto.UpdatePasteRequest
+		expectedError error
+		setup         func()
+	}{
+		{
+			"Validation error",
+			&dto.UpdatePasteRequest{},
+			errs.ValidationProcessError,
+			func() {
+				s.updateRequestValid.EXPECT().
+					Validate(mock.Anything).
+					Return(errs.ValidationProcessError).
+					Once()
+			},
+		},
+		{
+			"Get Paste By Hash - Not Found error",
+			&dto.UpdatePasteRequest{},
+			errs.PasteNotFound,
+			func() {
+				s.updateRequestValid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(nil, errs.PasteNotFound).
+					Once()
+			},
+		},
+		{
+			"Get Paste By Hash - Internal error",
+			&dto.UpdatePasteRequest{},
+			errs.InternalError,
+			func() {
+				s.updateRequestValid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(nil, errors.New("some error")).
+					Once()
+			},
+		},
+		{
+			"Hashing password error",
+			&dto.UpdatePasteRequest{
+				Privacy:  string(domain.ProtectedPolicy),
+				Password: "pass",
+			},
+			errs.InternalError,
+			func() {
+				s.updateRequestValid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(&domain.Paste{}, nil).
+					Once()
+
+				s.security.EXPECT().
+					CompareHashAndPassword(mock.Anything, mock.Anything).
+					Return(false).
+					Once()
+
+				s.security.EXPECT().
+					HashPassword(mock.Anything).
+					Return("", errors.New("some error"))
+			},
+		},
+		{
+			"Update paste error",
+			&dto.UpdatePasteRequest{},
+			errs.InternalError,
+			func() {
+				s.updateRequestValid.EXPECT().
+					Validate(mock.Anything).
+					Return(nil).
+					Once()
+
+				s.repo.EXPECT().
+					GetByHash(mock.Anything, mock.Anything).
+					Return(&domain.Paste{}, nil).
+					Once()
+
+				s.repo.EXPECT().
+					Update(mock.Anything, mock.Anything).
+					Return(nil, errors.New("some error")).
+					Once()
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			s.SetupTest()
+			tc.setup()
+
+			res, err := s.useCase.UpdatePaste(context.Background(), "hash", tc.value)
+
+			s.Require().Nil(res)
+			s.Require().Error(err)
+
+			s.ErrorIs(err, tc.expectedError)
 		})
 	}
 }

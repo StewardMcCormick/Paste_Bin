@@ -2,6 +2,7 @@ package paste
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/StewardMcCormick/Paste_Bin/internal/domain"
@@ -20,8 +21,11 @@ func (uc *UseCase) UpdatePaste(ctx context.Context, hash string, request *dto.Up
 
 	pasteFromDb, err := uc.repo.GetByHash(ctx, hash)
 	if err != nil {
+		if errors.Is(err, errs.PasteNotFound) {
+			return nil, err
+		}
 		log.Error(fmt.Sprintf("Get paste error - %v", err))
-		return nil, fmt.Errorf("%w - get past error", err)
+		return nil, fmt.Errorf("%w - get past error", errs.InternalError)
 	}
 
 	requestToDomain := &domain.Paste{}
@@ -37,8 +41,8 @@ func (uc *UseCase) UpdatePaste(ctx context.Context, hash string, request *dto.Up
 	}
 	if request.Privacy != string(domain.ProtectedPolicy) {
 		request.Password = ""
-	} else if (uc.security.CompareHashAndPassword(pasteFromDb.PasswordHash, request.Password) ||
-		request.Password == "") && request.Privacy == string(domain.ProtectedPolicy) {
+	} else if request.Password == "" ||
+		uc.security.CompareHashAndPassword(pasteFromDb.PasswordHash, request.Password) {
 		requestToDomain.PasswordHash = pasteFromDb.PasswordHash
 	} else {
 		passHash, err := uc.security.HashPassword(request.Password)
