@@ -18,16 +18,16 @@ type Cache interface {
 	RevokeByKey(ctx context.Context, key string)
 }
 
-type repository struct {
+type Repository struct {
 	pool  *pgxpool.Pool
 	cache Cache
 }
 
-func NewRepository(pool *pgxpool.Pool, cache Cache) *repository {
-	return &repository{pool: pool, cache: cache}
+func NewRepository(pool *pgxpool.Pool, cache Cache) *Repository {
+	return &Repository{pool: pool, cache: cache}
 }
 
-func (r *repository) Create(ctx context.Context, paste *domain.Paste) (*domain.Paste, error) {
+func (r *Repository) Create(ctx context.Context, paste *domain.Paste) (*domain.Paste, error) {
 	log := appctx.GetLogger(ctx)
 	tx, err := r.pool.Begin(ctx)
 	defer tx.Rollback(ctx)
@@ -67,7 +67,7 @@ func (r *repository) Create(ctx context.Context, paste *domain.Paste) (*domain.P
 	return paste, nil
 }
 
-func (r *repository) GetByHash(ctx context.Context, hash string) (*domain.Paste, error) {
+func (r *Repository) GetByHash(ctx context.Context, hash string) (*domain.Paste, error) {
 	log := appctx.GetLogger(ctx)
 
 	if content := r.cache.Get(ctx, hash); content != nil {
@@ -105,7 +105,7 @@ func (r *repository) GetByHash(ctx context.Context, hash string) (*domain.Paste,
 	return paste, nil
 }
 
-func (r *repository) getInfoByHash(ctx context.Context, hash string) (*domain.Paste, error) {
+func (r *Repository) getInfoByHash(ctx context.Context, hash string) (*domain.Paste, error) {
 	log := appctx.GetLogger(ctx)
 
 	query := `SELECT pi.id, pi.user_id, pi.views, pi.privacy, pi.password_hash, pi.created_at, pi.expire_at 
@@ -132,7 +132,7 @@ func (r *repository) getInfoByHash(ctx context.Context, hash string) (*domain.Pa
 	return result, nil
 }
 
-func (r *repository) getFullPasteByHash(ctx context.Context, hash string) (*domain.Paste, error) {
+func (r *Repository) getFullPasteByHash(ctx context.Context, hash string) (*domain.Paste, error) {
 	log := appctx.GetLogger(ctx)
 
 	query := `SELECT pi.id, pi.user_id, pi.views, pi.privacy, pi.password_hash, pi.created_at, pi.expire_at, pc.content
@@ -161,7 +161,7 @@ func (r *repository) getFullPasteByHash(ctx context.Context, hash string) (*doma
 	return result, nil
 }
 
-func (r *repository) Update(ctx context.Context, paste *domain.Paste) (*domain.Paste, error) {
+func (r *Repository) Update(ctx context.Context, paste *domain.Paste) (*domain.Paste, error) {
 	log := appctx.GetLogger(ctx)
 
 	tx, err := r.pool.Begin(ctx)

@@ -55,7 +55,7 @@ go-paste-bin/
 │    ├── 📂handler/                    # http-handlers
 │    │    ├── 📂middleware/             
 │    ├── 📂migrations/                 # файлы мигарций .sql
-│    ├── 📂repository/                 # репозиторный слой
+│    ├── 📂Repository/                 # репозиторный слой
 │    ├── 📂usecase/                    # серивисный слой
 │    └── 📂util/                       # дополнительные утилиты
 │        ├── 📂app_context/            # взаимодействие с контекстом приложения

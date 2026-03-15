@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: always
+    ports:
+      - "5432"
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: test_db
+
+  cache:
+    image: redis:8.6-alpine
+    restart: always
+    ports:
+      - "6379"
+    command: >
+      redis-server
+      --requirepass test_password
+      --maxmemory-policy allkeys-lfu
+      --maxmemory 100mb
