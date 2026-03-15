@@ -150,7 +150,7 @@ curl -X POST `http://localhost:8080/api/v1/paste` \
   -d '{ "content": "content",
         "privacy": "public"                 # одно из "public", "protected", "private",
         "Password": "password",             # если "privacy" установленно в "protected"
-        "expire_at": "2023-10-21T15:04:05Z" #  RFC 3339 / ISO 8601 строка, если не передается - заполняется дефолтным значением (см. `config.yaml`)
+        "expire_at": "2023-10-21T15:04:05Z" # RFC 3339 / ISO 8601 строка, если не передается - заполняется дефолтным значением (см. `config.yaml`)
       }'
 ```
 
@@ -194,7 +194,7 @@ curl -X PATCH `http://localhost:8080/api/v1/paste/{paste_hash}` \
   -d '{ "content": "content",
         "privacy": "public"                 # одно из "public", "protected", "private",
         "Password": "password",             # если "privacy" установленно в "protected"
-        "expire_at": "2023-10-21T15:04:05Z" #  RFC 3339 / ISO 8601 строка, если не передается - заполняется дефолтным значением (см. `config.yaml`)
+        "expire_at": "2023-10-21T15:04:05Z" # RFC 3339 / ISO 8601 строка, если не передается - заполняется дефолтным значением (см. `config.yaml`)
       }'
 ```
 #### Примечание: 
@@ -213,7 +213,7 @@ curl -X PATCH `http://localhost:8080/api/v1/paste/{paste_hash}` \
 
 ### Запуск тестов:
 - `make test`: запуск всех тестов
-- `make test-cover`: запуск всех тестов с отчетом по покрытию
+- `make test-with-cover`: запуск всех тестов с отчетом по покрытию
 
 ## ☎️ Контакты:
 - Email: bessonoven@mail.ru
