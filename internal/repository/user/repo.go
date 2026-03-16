@@ -6,10 +6,15 @@ import (
 	"github.com/StewardMcCormick/Paste_Bin/internal/adapter/postgres"
 	"github.com/StewardMcCormick/Paste_Bin/internal/domain"
 	appctx "github.com/StewardMcCormick/Paste_Bin/internal/util/app_context"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repository struct {
 	Pool postgres.DBTX
+}
+
+func NewRepository(pool *pgxpool.Pool) *Repository {
+	return &Repository{Pool: pool}
 }
 
 func (r *Repository) Create(ctx context.Context, user *domain.User) (*domain.User, error) {

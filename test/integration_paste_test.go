@@ -1,23 +1,123 @@
 package test
 
 import (
+	"context"
 	"testing"
+	"time"
 
-	appcache "github.com/StewardMcCormick/Paste_Bin/internal/repository/cache"
-	"github.com/StewardMcCormick/Paste_Bin/internal/repository/paste"
+	"github.com/StewardMcCormick/Paste_Bin/internal/domain"
+	"github.com/StewardMcCormick/Paste_Bin/internal/repository/user"
 	"github.com/stretchr/testify/suite"
 )
 
-type PasteRepoIntTestSuite struct {
+var (
+	testUser = &domain.User{}
+)
+
+type UserRepoIntTestSuite struct {
 	suite.Suite
-	repo *paste.Repository
+	repo *user.Repository
 }
 
 func TestPasteRepoInt(t *testing.T) {
-	suite.Run(t, new(PasteRepoIntTestSuite))
+	suite.Run(t, new(UserRepoIntTestSuite))
 }
 
-func (s *PasteRepoIntTestSuite) SetupSuite() {
-	pasteCache := appcache.NewPasteCache(pasteCacheRedisClient)
-	s.repo = paste.NewRepository(pool, pasteCache)
+func (s *UserRepoIntTestSuite) SetupSuite() {
+	s.repo = user.NewRepository(pool)
+
+	createUserQuery := `INSERT INTO users(username, password_hash, created_at) VALUES (
+    	'test_user', 'test_pass_hash', now()
+	) RETURNING *`
+
+	err := pool.QueryRow(context.Background(), createUserQuery).Scan(
+		&testUser.Id,
+		&testUser.Username,
+		&testUser.Password,
+		&testUser.CreatedAt,
+	)
+	s.Require().NoError(err)
+}
+
+func (s *UserRepoIntTestSuite) TearDownSuite() {
+	query := `TRUNCATE TABLE users CASCADE`
+
+	_, err := pool.Exec(context.Background(), query)
+
+	s.Require().NoError(err)
+}
+
+func (s *UserRepoIntTestSuite) Test_Get_Success() {
+	query := `SELECT * FROM users WHERE id=$1`
+
+	resultFromDb := &domain.User{}
+	err := pool.QueryRow(context.Background(), query, testUser.Id).Scan(
+		&resultFromDb.Id,
+		&resultFromDb.Username,
+		&resultFromDb.Password,
+		&resultFromDb.CreatedAt,
+	)
+
+	s.Require().NoError(err)
+
+	resultFromRepo, err := s.repo.GetByUsername(context.Background(), testUser.Username)
+
+	s.Require().NoError(err)
+
+	s.NotNil(resultFromDb)
+	s.Equal(resultFromDb.Id, resultFromRepo.Id)
+	s.Equal(resultFromDb.Username, resultFromRepo.Username)
+	s.Equal(resultFromDb.Password, resultFromRepo.Password)
+	s.True(resultFromDb.CreatedAt.Equal(resultFromRepo.CreatedAt))
+}
+
+func (s *UserRepoIntTestSuite) Test_Get_NotFound() {
+	result, err := s.repo.GetByUsername(context.Background(), "not_exist")
+
+	s.NoError(err)
+	s.Nil(result)
+}
+
+func (s *UserRepoIntTestSuite) Test_Exists_True() {
+	result, err := s.repo.Exists(context.Background(), testUser.Username)
+
+	s.NoError(err)
+	s.True(result)
+}
+
+func (s *UserRepoIntTestSuite) Test_Exists_False() {
+	result, err := s.repo.Exists(context.Background(), "not_exist")
+
+	s.NoError(err)
+	s.False(result)
+}
+
+func (s *UserRepoIntTestSuite) Test_Create_Success() {
+	now := time.Now()
+	value := &domain.User{
+		Username:  "user_2",
+		Password:  "pass_2",
+		CreatedAt: now,
+	}
+
+	result, err := s.repo.Create(context.Background(), value)
+
+	s.NoError(err)
+	s.Equal(value.Username, result.Username)
+	s.Equal(value.Password, result.Password)
+	s.True(value.CreatedAt.Equal(result.CreatedAt))
+
+	userFromRepo, err := s.repo.GetByUsername(context.Background(), value.Username)
+
+	s.NoError(err)
+	s.Equal(value.Username, userFromRepo.Username)
+	s.Equal(value.Password, userFromRepo.Password)
+	s.True(value.CreatedAt.Equal(userFromRepo.CreatedAt))
+}
+
+func (s *UserRepoIntTestSuite) Test_Create_AlreadyExists() {
+	result, err := s.repo.Create(context.Background(), testUser)
+
+	s.Nil(result)
+	s.Error(err)
 }
