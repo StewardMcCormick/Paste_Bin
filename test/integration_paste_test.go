@@ -31,6 +31,18 @@ func (s *PasteRepoIntTest) SetupSuite() {
 	createTestPaste(context.Background(), pool)
 }
 
+func (s *PasteRepoIntTest) TearDownSuite() {
+	query := `TRUNCATE TABLE paste_info CASCADE`
+	_, err := pool.Exec(context.Background(), query)
+
+	s.Require().NoError(err)
+
+	query = `TRUNCATE TABLE users CASCADE`
+	_, err = pool.Exec(context.Background(), query)
+
+	s.Require().NoError(err)
+}
+
 func (s *PasteRepoIntTest) Test_GetByHash_Success() {
 	result, err := s.repo.GetByHash(context.Background(), testPaste.Hash)
 
