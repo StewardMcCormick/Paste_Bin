@@ -6,6 +6,10 @@ gen-mocks:
 test: gen-mocks
 	@go test ./...
 
+.PHONY: test-without-integrations
+test-without-integrations: gen-mocks
+	@go test $(go list ./... | grep -v ./test) -cover
+
 .PHONY: test-with-cover
 test-with-cover: gen-mocks
 	@go test -cover ./...
