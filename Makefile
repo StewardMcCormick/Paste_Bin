@@ -8,7 +8,7 @@ test: gen-mocks
 
 .PHONY: test-without-integrations
 test-without-integrations: gen-mocks
-	@go test $(go list ./... | grep -v ./test) -cover
+	@go test $(shell go list ./... | grep -v ./test)
 
 .PHONY: test-with-cover
 test-with-cover: gen-mocks
