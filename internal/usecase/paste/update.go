@@ -53,7 +53,7 @@ func (uc *UseCase) UpdatePaste(ctx context.Context, hash string, request *dto.Up
 
 		requestToDomain.PasswordHash = passHash
 	}
-	if request.ExpireAt == pasteFromDb.ExpireAt || request.ExpireAt.IsZero() {
+	if request.ExpireAt.Equal(pasteFromDb.ExpireAt) || request.ExpireAt.IsZero() {
 		requestToDomain.ExpireAt = pasteFromDb.ExpireAt
 	} else {
 		requestToDomain.ExpireAt = request.ExpireAt
