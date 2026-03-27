@@ -11,6 +11,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	apiKeyAlph = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789&%$#@!"
+)
+
 type Util struct {
 }
 
@@ -46,13 +50,13 @@ func (s *Util) GenerateAPIKey(ctx context.Context) (keyPrefix string, key string
 		prefix = "pb_live"
 	}
 
-	randPart, err := gonanoid.New(4)
+	randPart, err := gonanoid.Generate(apiKeyAlph, 4)
 	if err != nil {
 		return "", "", err
 	}
 	resultKey := prefix + "_" + randPart + "_"
 
-	randPart, err = gonanoid.New(12)
+	randPart, err = gonanoid.Generate(apiKeyAlph, 12)
 	if err != nil {
 		return "", "", err
 	}
